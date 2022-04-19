@@ -1,1 +1,1 @@
-# go-cyb
+# GO-CYB
