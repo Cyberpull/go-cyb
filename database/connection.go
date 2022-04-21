@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-func Connect() (value *dbo.TxDB, err error) {
+func Connect(opts dbo.Options) (value *dbo.TxDB, err error) {
 	var (
 		db   *gorm.DB
 		conn gorm.Dialector
@@ -21,7 +21,7 @@ func Connect() (value *dbo.TxDB, err error) {
 		},
 	}
 
-	conn, err = dialector()
+	conn, err = dialector(&opts)
 
 	if err != nil {
 		return
@@ -30,10 +30,10 @@ func Connect() (value *dbo.TxDB, err error) {
 	db, err = gorm.Open(conn, config)
 
 	if err != nil {
-		panic(err)
+		return
 	}
 
-	if driver := dbo.Driver(); driver == dbo.DRIVER_PGSQL {
+	if dbo.Driver(&opts) == dbo.DRIVER_PGSQL {
 		err = db.Exec(`SET DEFAULT_TRANSACTION_ISOLATION TO SERIALIZABLE`).Error
 		// SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 		// SET DEFAULT_TRANSACTION_ISOLATION TO SERIALIZABLE;
@@ -43,7 +43,7 @@ func Connect() (value *dbo.TxDB, err error) {
 		}
 	}
 
-	value = dbo.New(db)
+	value = dbo.New(db, &opts)
 
 	return
 }

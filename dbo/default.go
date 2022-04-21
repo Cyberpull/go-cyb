@@ -10,11 +10,13 @@ type TxFunction func(tx *TxDB) error
 
 type TxDB struct {
 	*gorm.DB
+
+	opts *Options
 }
 
 func (tx *TxDB) Transaction(fn TxFunction) error {
 	return tx.DB.Transaction(func(tx1 *gorm.DB) (err error) {
-		newTx := New(tx1)
+		newTx := New(tx1, tx.opts)
 
 		defer func() {
 			if err != nil {
@@ -44,8 +46,9 @@ func (tx *TxDB) Transaction(fn TxFunction) error {
 
 /********************************/
 
-func New(tx *gorm.DB) *TxDB {
+func New(tx *gorm.DB, opts *Options) *TxDB {
 	return &TxDB{
-		DB: tx,
+		DB:   tx,
+		opts: opts,
 	}
 }

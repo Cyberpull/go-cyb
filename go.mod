@@ -4,9 +4,12 @@ go 1.18
 
 require (
 	github.com/fatih/color v1.13.0
+	github.com/google/uuid v1.3.0
 	github.com/joho/godotenv v1.4.0
 	github.com/pquerna/otp v1.3.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+	gorm.io/driver/mysql v1.3.3
+	gorm.io/driver/postgres v1.3.4
 	gorm.io/gorm v1.23.4
 )
 
@@ -28,6 +31,4 @@ require (
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 	golang.org/x/text v0.3.7 // indirect
-	gorm.io/driver/mysql v1.3.3 // indirect
-	gorm.io/driver/postgres v1.3.4 // indirect
 )
