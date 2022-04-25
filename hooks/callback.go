@@ -6,7 +6,7 @@ import (
 	"cyberpull.com/go-cyb/errors"
 )
 
-type Callback interface{}
+type Callback any
 
 func toCallback(fn Callback) (value reflect.Value, err error) {
 	tmpValue := reflect.ValueOf(fn)
@@ -73,7 +73,7 @@ func toFilterCallback(fn Callback) (value reflect.Value, err error) {
 	return
 }
 
-func call(fn reflect.Value, args ...interface{}) (value []reflect.Value, err error) {
+func call(fn reflect.Value, args ...any) (value []reflect.Value, err error) {
 	fargs := make([]reflect.Value, len(args))
 
 	for i, arg := range args {

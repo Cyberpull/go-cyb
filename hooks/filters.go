@@ -22,12 +22,12 @@ func AddFilter(channel string, callback Callback) {
 	filterHooks[channel] = append(filterHooks[channel], fn)
 }
 
-func ApplyFilters[T any](channel string, data T, args ...interface{}) (value T, err error) {
+func ApplyFilters[T any](channel string, data T, args ...any) (value T, err error) {
 	value = data
 
 	if filters, ok := filterHooks[channel]; ok {
 		for _, fn := range filters {
-			args[0] = value
+			args = append([]any{value}, args...)
 
 			var retValues []reflect.Value
 

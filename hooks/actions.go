@@ -22,7 +22,7 @@ func AddAction(channel string, callback Callback) (err error) {
 	return
 }
 
-func DoActions(channel string, args ...interface{}) (err error) {
+func DoActions(channel string, args ...any) (err error) {
 	if actions, ok := actionHooks[channel]; ok {
 		for _, fn := range actions {
 			var value []reflect.Value

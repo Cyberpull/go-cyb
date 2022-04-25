@@ -1,5 +1,8 @@
 package objects
 
+type Predicate[T comparable] func(value T) bool
+type Callback[T comparable] func(value T, index int)
+
 type Array[T comparable] struct {
 	data []T
 }
@@ -89,6 +92,37 @@ func (a *Array[T]) IndexOf(v T) int {
 
 func (a *Array[T]) Length() int {
 	return len(a.data)
+}
+
+func (a *Array[T]) Find(fn Predicate[T]) T {
+	var value T
+
+	for _, entry := range a.data {
+		if ok := fn(entry); ok {
+			value = entry
+			break
+		}
+	}
+
+	return value
+}
+
+func (a *Array[T]) Filter(fn Predicate[T]) []T {
+	value := make([]T, 0)
+
+	for _, entry := range a.data {
+		if ok := fn(entry); ok {
+			value = append(value, entry)
+		}
+	}
+
+	return value
+}
+
+func (a *Array[T]) ForEach(fn Callback[T]) {
+	for i, entry := range a.data {
+		fn(entry, i)
+	}
 }
 
 /*************************************/
