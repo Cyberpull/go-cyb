@@ -69,7 +69,7 @@ func (s *ServerClientRef) sendIdentifier() (err error) {
 
 func (s *ServerClientRef) checkAndValidateInstance() {
 	if s.conn == nil || s.reader == nil {
-		err := errors.Newf("ClientRef not properly instanciated")
+		err := errors.Newf("ServerClientRef not properly instanciated")
 		panic(err)
 	}
 }
@@ -131,6 +131,10 @@ func (s *ServerClientRef) writeUpdate(output *Output) (err error) {
 	_, err = s.Writeln(data)
 
 	return
+}
+
+func (s *ServerClientRef) close() error {
+	return s.conn.Close()
 }
 
 /**********************************************/

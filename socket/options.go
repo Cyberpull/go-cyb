@@ -11,7 +11,7 @@ import (
 type Options interface {
 	host() string
 	port() string
-	name() *string
+	name() string
 	alias() *string
 	tlsConfig() *tls.Config
 	setTlsConfig(config *tls.Config)
@@ -22,13 +22,13 @@ func address(opts Options) string {
 }
 
 func sanitizeNameAndAlias(opts Options) (err error) {
-	if opts.name() == nil || *opts.name() == "" {
+	if opts.name() == "" {
 		err = errors.New(`"Name" is required`)
 		return
 	}
 
 	if opts.alias() == nil || *opts.alias() == "" {
-		*opts.alias() = *opts.name()
+		*opts.alias() = opts.name()
 	}
 
 	*opts.alias() = strings.ToLower(*opts.alias())

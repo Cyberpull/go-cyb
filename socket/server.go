@@ -184,7 +184,9 @@ func (s *Server) Listen() {
 	var conn net.Conn
 
 	for {
-		if conn, s.err = s.listener.Accept(); s.err != nil {
+		var err error
+
+		if conn, err = s.listener.Accept(); err != nil {
 			break
 		}
 

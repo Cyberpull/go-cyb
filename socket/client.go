@@ -1,10 +1,10 @@
 package socket
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/tls"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,11 +12,12 @@ import (
 	"cyberpull.com/go-cyb/log"
 )
 
-type ClientAuthSubscriber func(conn *tls.Conn) (err error)
+type ClientAuthSubscriber func(ref *ClientRef) (err error)
 
 type Client struct {
 	uuid                    string
 	err                     error
+	ref                     *ClientRef
 	conn                    *tls.Conn
 	mutex                   sync.Mutex
 	timeout                 time.Duration
@@ -33,29 +34,74 @@ func (c *Client) Auth(subs ...ClientAuthSubscriber) {
 	c.authSubscribers = append(c.authSubscribers, subs...)
 }
 
-func (c *Client) execAuth(conn *tls.Conn) (err error) {
-	for _, subscriber := range c.authSubscribers {
-		err = subscriber(conn)
+func (c *Client) execAuth() (err error) {
+	if len(c.authSubscribers) > 0 {
+		log.Magentafln(`Authorizing %s...`, c.opts.Name)
 
-		if err != nil {
-			break
+		for _, subscriber := range c.authSubscribers {
+			err = subscriber(c.ref)
+
+			if err != nil {
+				break
+			}
+		}
+
+		if err == nil {
+			log.Successln("Authorized")
 		}
 	}
 
 	return
 }
 
-func (c *Client) receiveIdentifier(reader *bufio.Reader) (err error) {
-	// TODO: Receive Identifier
+func (c *Client) receiveIdentifier() (err error) {
+	log.Magentafln("Receiving identifier for %s...", c.opts.Name)
+
+	var (
+		data   []byte
+		prefix string = "UUID "
+	)
+
+	if data, err = c.ref.ReadBytes('\n'); err != nil {
+		return
+	}
+
+	if !bytes.HasPrefix(data, []byte(prefix)) {
+		err = errors.New("Invalid UUID information")
+		return
+	}
+
+	data = bytes.TrimPrefix(data, []byte(prefix))
+	data = bytes.TrimSpace(data)
+
+	if len(data) == 0 {
+		err = errors.New("Invalid UUID")
+		return
+	}
+
+	if _, err = c.ref.WriteStringln("RECEIVED"); err != nil {
+		return
+	}
+
+	c.uuid = string(data)
+
+	log.Successln("Received identifier")
+
 	return
 }
 
 func (c *Client) sendClientInformation() (err error) {
+	log.Magentafln("Registering %s...", c.opts.Name)
+
 	if err = sendClientName(c); err != nil {
 		return
 	}
 
-	err = sendClientAlias(c)
+	if err = sendClientAlias(c); err != nil {
+		return
+	}
+
+	log.Successln("Registered")
 
 	return
 }
@@ -68,45 +114,43 @@ func (c *Client) connect() (err error) {
 	c.isRunning = true
 
 	defer func() {
-		c.conn = nil
+		c.ref = nil
 
 		c.isRunning = false
+
+		c.uuid = ""
 
 		if r := recover(); r != nil {
 			err = errors.From(r)
 		}
 	}()
 
+	var conn *tls.Conn
+
 	dialer := &net.Dialer{Timeout: c.timeout}
-	if c.conn, err = tls.DialWithDialer(dialer, "tcp", address, c.opts.TlsConfig); err != nil {
+	if conn, err = tls.DialWithDialer(dialer, "tcp", address, c.opts.TlsConfig); err != nil {
 		return
 	}
 
-	defer c.conn.Close()
+	c.ref = newClientRef(conn)
+
+	defer c.ref.close()
 
 	log.Successfln("Connected to %s", address)
-
-	log.Magentaln("Registering client information...")
 
 	if err = c.sendClientInformation(); err != nil {
 		return
 	}
 
-	log.Successln("Registered client information")
-
-	if err = c.execAuth(c.conn); err != nil {
+	if err = c.execAuth(); err != nil {
 		return
 	}
 
-	log.Successln("Authorized")
-
-	reader := bufio.NewReader(c.conn)
-
-	if err = c.receiveIdentifier(reader); err != nil {
+	if err = c.receiveIdentifier(); err != nil {
 		return
 	}
 
-	err = c.runSession(reader)
+	err = c.runSession()
 
 	return
 }
@@ -116,22 +160,24 @@ func (c *Client) Start() {
 
 	defer func() {
 		c.isStopped = false
-
-		if err != nil {
-			log.Errorln(err)
-		}
 	}()
 
 	if err = sanitizeNameAndAlias(&c.opts); err != nil {
+		log.Errorln(err)
 		return
 	}
 
 	if err = sanitizeTlsConfig(&c.opts); err != nil {
+		log.Errorln(err)
 		return
 	}
 
 	for {
 		if err = c.connect(); err != nil {
+			if c.isStopped {
+				break
+			}
+
 			duration := time.Second * ClientRetry
 
 			log.Errorln(err)
@@ -147,12 +193,15 @@ func (c *Client) Start() {
 }
 
 func (c *Client) Stop() (err error) {
-	c.isStopped = true
-	c.conn.Close()
+	if c.ref != nil {
+		c.isStopped = true
+		c.ref.close()
+	}
+
 	return
 }
 
-func (c *Client) runSession(reader *bufio.Reader) (err error) {
+func (c *Client) runSession() (err error) {
 	c.isRunningSession = true
 
 	defer func() {
@@ -162,11 +211,11 @@ func (c *Client) runSession(reader *bufio.Reader) (err error) {
 	var data []byte
 
 	for {
-		if data, err = reader.ReadBytes('\n'); err != nil {
+		if data, err = c.ref.ReadBytes('\n'); err != nil {
 			break
 		}
 
-		if err2 := c.checkError(data); err2 != nil {
+		if err2 := c.ref.checkError(data); err2 != nil {
 			log.Errorln(err2)
 			continue
 		}
@@ -179,23 +228,6 @@ func (c *Client) runSession(reader *bufio.Reader) (err error) {
 
 func (c *Client) processData(data []byte) {
 	// TODO: Process Data
-}
-
-func (c *Client) checkError(data []byte) (err error) {
-	c.mutex.Lock()
-
-	defer c.mutex.Unlock()
-
-	if !bytes.HasPrefix(data, []byte(ErrorPrefix)) {
-		return
-	}
-
-	data = bytes.TrimPrefix(data, []byte(ErrorPrefix))
-	err = errors.New(string(data))
-
-	c.conn.Write(append([]byte(ErrorRcpt), '\n'))
-
-	return
 }
 
 func (c *Client) EnsureStarted() (err error) {
@@ -224,9 +256,39 @@ func NewClient(opts ClientOptions) *Client {
 }
 
 func sendClientName(c *Client) (err error) {
+	var data string
+
+	if data, err = c.ref.ReadString('\n'); err != nil {
+		return
+	}
+
+	data = strings.TrimSpace(data)
+
+	if data != "CLIENT NAME:" {
+		err = errors.Newf(`Expected "CLIENT NAME:", got "%s" instead.`, 500, data)
+		return
+	}
+
+	_, err = c.ref.WriteStringln(c.opts.Name)
+
 	return
 }
 
 func sendClientAlias(c *Client) (err error) {
+	var data string
+
+	if data, err = c.ref.ReadString('\n'); err != nil {
+		return
+	}
+
+	data = strings.TrimSpace(data)
+
+	if data != "CLIENT ALIAS:" {
+		err = errors.Newf(`Expected "CLIENT ALIAS:", got "%s" instead.`, 500, data)
+		return
+	}
+
+	_, err = c.ref.WriteStringln(c.opts.Alias)
+
 	return
 }

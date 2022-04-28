@@ -33,7 +33,7 @@ func (c *ClientUpdateHandlerCollection) updateAll(method, channel string, out *O
 	}
 
 	for _, handler := range handlers {
-		handler(out)
+		go handler(out)
 	}
 }
 

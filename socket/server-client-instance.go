@@ -17,6 +17,7 @@ type ServerClientInstance struct {
 	sig       chan os.Signal
 	isRunning bool
 	isExiting bool
+	isStopped bool
 }
 
 func (s *ServerClientInstance) Start() {
@@ -32,9 +33,7 @@ func (s *ServerClientInstance) Start() {
 
 	go s.beginInstance()
 
-	msg := <-s.sig
-
-	log.Printfln("Exiting: %s", msg)
+	<-s.sig
 
 	s.ref.conn.Close()
 }
@@ -45,6 +44,7 @@ func (s *ServerClientInstance) beginInstance() {
 	defer func() {
 		s.isRunning = false
 		s.isExiting = false
+		s.isStopped = false
 
 		if r := recover(); r != nil {
 			err = errors.From(r)
@@ -67,11 +67,17 @@ func (s *ServerClientInstance) beginInstance() {
 
 	for {
 		if input, err = s.ref.ReadBytes('\n'); err != nil {
-			return
+			if s.isStopped {
+				err = nil
+			}
+
+			break
 		}
 
 		go s.processInput(input)
 	}
+
+	s.Stop()
 }
 
 func (s *ServerClientInstance) processInput(input []byte) {
@@ -121,6 +127,7 @@ func (s *ServerClientInstance) processInput(input []byte) {
 }
 
 func (s *ServerClientInstance) Stop() {
+	s.isStopped = true
 	s.sig <- os.Interrupt
 }
 

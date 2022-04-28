@@ -20,8 +20,8 @@ func (s ServerOptions) port() string {
 	return s.Port
 }
 
-func (s *ServerOptions) name() *string {
-	return &s.Name
+func (s *ServerOptions) name() string {
+	return s.Name
 }
 
 func (s *ServerOptions) alias() *string {
