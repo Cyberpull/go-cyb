@@ -2,6 +2,7 @@ package socket
 
 import (
 	"cyberpull.com/go-cyb/errors"
+	"cyberpull.com/go-cyb/objects"
 )
 
 type Context struct {
@@ -11,7 +12,15 @@ type Context struct {
 }
 
 func (c *Context) createOutput() *Output {
-	return &Output{uuid: c.request.UUID}
+	return &Output{
+		uuid:    c.request.UUID,
+		Method:  c.request.Method,
+		Channel: c.request.Channel,
+	}
+}
+
+func (c *Context) ParseData(v any) error {
+	return objects.ParseJSON(c.request.Data, v)
 }
 
 func (c *Context) Error(v any, code ...int) *Output {

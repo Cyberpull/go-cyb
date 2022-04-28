@@ -22,7 +22,7 @@ func (c *ClientResponseCollection) Set(uuid string, out *Output) (err error) {
 	return
 }
 
-func (c *ClientResponseCollection) Get(uuid string, timeout ...time.Duration) (out *Output, err error) {
+func (c *ClientResponseCollection) Get(req *Request, timeout ...time.Duration) (out *Output, err error) {
 	if len(timeout) == 0 {
 		timeout = append(timeout, time.Second*10)
 	}
@@ -38,8 +38,8 @@ func (c *ClientResponseCollection) Get(uuid string, timeout ...time.Duration) (o
 			return
 
 		default:
-			if tmpOut, ok := c.mapper[uuid]; ok {
-				delete(c.mapper, uuid)
+			if tmpOut, ok := c.mapper[req.UUID]; ok {
+				delete(c.mapper, req.UUID)
 				out = tmpOut
 				return
 			}

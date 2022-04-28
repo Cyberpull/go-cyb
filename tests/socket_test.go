@@ -23,12 +23,18 @@ func socketRegisterServerHandlers() socket.ServerHandlerSubscriber {
 	return func(subscriber *socket.ServerHandlerCollection) (err error) {
 		log.Println("Registering test handlers...")
 
-		subscriber.On("SUCCESS", "/testing", func(ctx *socket.Context) *socket.Output {
-			return ctx.Success("Success Response")
-		})
+		subscriber.On("DEMO", "/testing", func(ctx *socket.Context) *socket.Output {
+			var data string
 
-		subscriber.On("ERROR", "/testing", func(ctx *socket.Context) *socket.Output {
-			return ctx.Error("Error Response")
+			if err := ctx.ParseData(&data); err != nil {
+				return ctx.Error(err)
+			}
+
+			if data != "TestData" {
+				return ctx.Error("FAILED")
+			}
+
+			return ctx.Success("SUCCESSFUL")
 		})
 
 		return
@@ -156,11 +162,29 @@ func TestSocket_StartClient(t *testing.T) {
 }
 
 func TestSocket_SendSuccessfulRequest(t *testing.T) {
-	//
+	resp, err := socket.MakeRequest[string](socketClient, "DEMO", "/testing", "TestData")
+
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	if resp != "SUCCESSFUL" {
+		t.Fatalf(`Expected "SUCCESSFUL", got "%s" instead.`, resp)
+	}
 }
 
 func TestSocket_SendFailedRequest(t *testing.T) {
-	//
+	resp, err := socket.MakeRequest[string](socketClient, "DEMO", "/testing", "BadTestData")
+
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	if resp != "FAILED" {
+		t.Fatalf(`Expected "FAILED", got "%s" instead.`, resp)
+	}
 }
 
 // Conclusion of socket tests

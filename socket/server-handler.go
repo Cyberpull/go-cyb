@@ -28,7 +28,7 @@ func (s *ServerHandlerCollection) Get(method, channel string) (handler ServerHan
 
 	handler, ok := s.handlers[key]
 
-	if ok {
+	if !ok {
 		err = errors.Newf(`No action found for "%s" -> "%s"`, 400, method, channel)
 		return
 	}

@@ -8,6 +8,9 @@ const (
 	ErrorPrefix string = "ERROR_MSG::"
 	ErrorRcpt   string = "ERROR_RCPT"
 
-	ResponsePrefix string = "RESPONSE::"
-	UpdatePrefix   string = "UPDATE::"
+	ResponseTxt    string = "RESPONSE"
+	ResponsePrefix string = ResponseTxt + "::"
+
+	UpdateTxt    string = "UPDATE"
+	UpdatePrefix string = UpdateTxt + "::"
 )

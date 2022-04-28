@@ -10,6 +10,7 @@ import (
 
 	"cyberpull.com/go-cyb/errors"
 	"cyberpull.com/go-cyb/log"
+	"cyberpull.com/go-cyb/objects"
 )
 
 type ClientAuthSubscriber func(ref *ClientRef) (err error)
@@ -227,7 +228,101 @@ func (c *Client) runSession() (err error) {
 }
 
 func (c *Client) processData(data []byte) {
-	// TODO: Process Data
+	var err error
+
+	defer func() {
+		if err != nil {
+			log.Errorln(err)
+		}
+	}()
+
+	if len(data) == 0 {
+		return
+	}
+
+	if bytes.HasPrefix(data, []byte(ResponsePrefix)) {
+		data = bytes.TrimPrefix(data, []byte(ResponsePrefix))
+
+		delimIndex := bytes.Index(data, []byte("::"))
+
+		if delimIndex < 0 {
+			err = errors.New("Invalid response")
+			return
+		}
+
+		requestUUID := string(data[:delimIndex])
+		requestUUID = strings.TrimSpace(requestUUID)
+
+		if requestUUID == "" {
+			err = errors.New("Invalid response uuid")
+			return
+		}
+
+		data = data[delimIndex+2:]
+
+		out := &Output{}
+
+		if err = objects.ParseJSON(data, out); err != nil {
+			return
+		}
+
+		err = c.responseCollection.Set(requestUUID, out)
+
+		return
+	}
+
+	if bytes.HasPrefix(data, []byte(UpdatePrefix)) {
+		data = bytes.TrimPrefix(data, []byte(UpdatePrefix))
+
+		out := &Output{}
+
+		if err = objects.ParseJSON(data, out); err != nil {
+			return
+		}
+
+		go c.updateHandlerCollection.updateAll(out.Method, out.Channel, out)
+
+		return
+	}
+
+	err = errors.New("Unable to process data")
+}
+
+func (c *Client) request(method, channel string, data any, timeout ...time.Duration) (out *Output, err error) {
+	method = strings.ToUpper(method)
+
+	var request *Request
+
+	if request, err = newRequest(c); err != nil {
+		return
+	}
+
+	if err = request.SetData(data); err != nil {
+		return
+	}
+
+	request.Method = method
+	request.Channel = channel
+
+	var requestBytes []byte
+
+	if requestBytes, err = objects.ToJSON(request); err != nil {
+		return
+	}
+
+	if _, err = c.ref.Writeln(requestBytes); err != nil {
+		return
+	}
+
+	var tmpOut *Output
+
+	if tmpOut, err = c.responseCollection.Get(request, timeout...); err != nil {
+		return
+	}
+
+	out = tmpOut
+
+	return
 }
 
 func (c *Client) EnsureStarted() (err error) {
