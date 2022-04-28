@@ -21,13 +21,7 @@ func (e Error) Error() string {
 /**********************************/
 
 func New(message string, code ...int) *Error {
-	if len(code) == 0 {
-		code = append(code, 500)
-	}
-
-	if code[0] == 0 {
-		code[0] = 500
-	}
+	code = sanitizeErrorCode(code...)
 
 	return &Error{
 		code:    code[0],
@@ -61,6 +55,7 @@ func From(v any, code ...int) *Error {
 		value = x
 
 		if len(code) > 0 {
+			code = sanitizeErrorCode(code...)
 			value.code = code[0]
 		}
 	case string:
@@ -80,4 +75,16 @@ func Is(err error, target error) bool {
 
 func As(err error, target any) bool {
 	return errors.As(err, target)
+}
+
+func sanitizeErrorCode(code ...int) []int {
+	if len(code) == 0 {
+		code = append(code, 500)
+	}
+
+	if code[0] == 0 || code[0] == 200 {
+		code[0] = 500
+	}
+
+	return code
 }

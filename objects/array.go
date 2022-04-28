@@ -1,10 +1,13 @@
 package objects
 
+import "sync"
+
 type Predicate[T comparable] func(value T) bool
 type Callback[T comparable] func(value T, index int)
 
 type Array[T comparable] struct {
-	data []T
+	mutex sync.Mutex
+	data  []T
 }
 
 func (a *Array[T]) First() T {
@@ -62,6 +65,10 @@ func (a *Array[T]) Slice(start int, stop ...int) *Array[T] {
 }
 
 func (a *Array[T]) Splice(offset int, length int, v ...T) *Array[T] {
+	a.mutex.Lock()
+
+	defer a.mutex.Unlock()
+
 	value := make([]T, 0)
 
 	endOffset := offset + length

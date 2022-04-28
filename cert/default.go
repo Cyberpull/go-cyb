@@ -22,19 +22,19 @@ func init() {
 	keyFile = os.Getenv("CERT_KEY_FILE")
 
 	if certFile == "" {
-		panic(`""CERT_CRT_FILE" environment variable is required`)
+		panic(`"CERT_CRT_FILE" environment variable is required`)
 	}
 
 	if keyFile == "" {
-		panic(`""CERT_KEY_FILE" environment variable is required`)
+		panic(`"CERT_KEY_FILE" environment variable is required`)
 	}
 }
 
 func GetTLSConfig() (config *tls.Config, err error) {
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	certs, err := GetCertificates()
 
 	config = &tls.Config{
-		Certificates: []tls.Certificate{cert},
+		Certificates: certs,
 	}
 
 	if certEnv == "local" {
@@ -42,6 +42,18 @@ func GetTLSConfig() (config *tls.Config, err error) {
 		config.VerifyPeerCertificate = nil
 		config.VerifyConnection = nil
 	}
+
+	return
+}
+
+func GetCertificates() (value []tls.Certificate, err error) {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+
+	if err != nil {
+		return
+	}
+
+	value = []tls.Certificate{cert}
 
 	return
 }
