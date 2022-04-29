@@ -16,6 +16,8 @@ type ServerHandlerSubscriber func(subscriber *ServerHandlerCollection) (err erro
 type ServerSetupSubscriber func(ref *ServerClientRef) (err error)
 type ServerCleanupSubscriber func(ref *ServerClientRef) (err error)
 
+type ServerClientInitHandler func(updater *ServerClientUpdater) (err error)
+
 type Server struct {
 	err                error
 	opts               ServerOptions
@@ -23,6 +25,7 @@ type Server struct {
 	listener           net.Listener
 	clients            *objects.Array[*ServerClientInstance]
 	handlerCollection  *ServerHandlerCollection
+	clientInitHandlers []ServerClientInitHandler
 	bootSubscribers    []ServerBootSubscriber
 	authSubscribers    []ServerAuthSubscriber
 	handlerSubscribers []ServerHandlerSubscriber
@@ -103,6 +106,22 @@ func (s *Server) Cleanup(subs ...ServerCleanupSubscriber) {
 func (s *Server) execCleanup(ref *ServerClientRef) (err error) {
 	for _, subscriber := range s.cleanupSubscribers {
 		err = subscriber(ref)
+
+		if err != nil {
+			break
+		}
+	}
+
+	return
+}
+
+func (s *Server) ClientInit(handlers ...ServerClientInitHandler) {
+	s.clientInitHandlers = append(s.clientInitHandlers, handlers...)
+}
+
+func (s *Server) execClientInit(updater *ServerClientUpdater) (err error) {
+	for _, subscriber := range s.clientInitHandlers {
+		err = subscriber(updater)
 
 		if err != nil {
 			break
@@ -245,6 +264,12 @@ func (s *Server) Stop() error {
 	}
 
 	return s.listener.Close()
+}
+
+func (s *Server) UpdateAll(args ...any) {
+	s.clients.ForEach(func(client *ServerClientInstance, _ int) {
+		go client.Update(args...)
+	})
 }
 
 func (s *Server) IsListening() bool {

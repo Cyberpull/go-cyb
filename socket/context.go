@@ -6,8 +6,10 @@ import (
 )
 
 type Context struct {
+	srv      *Server
 	ref      *ServerClientRef
 	instance *ServerClientInstance
+	updater  *ServerClientUpdater
 	request  *Request
 }
 
@@ -53,12 +55,22 @@ func (c *Context) Success(v any) *Output {
 	return value
 }
 
+func (c *Context) Update(args ...any) error {
+	return c.updater.Update(args...)
+}
+
+func (c *Context) UpdateAll(args ...any) {
+	c.srv.UpdateAll(args...)
+}
+
 /**********************************************/
 
 func newContext(i *ServerClientInstance, r *Request) *Context {
 	return &Context{
 		instance: i,
+		srv:      i.srv,
 		ref:      i.ref,
+		updater:  i.updater,
 		request:  r,
 	}
 }

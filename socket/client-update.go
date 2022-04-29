@@ -23,8 +23,8 @@ func (c *ClientUpdateHandlerCollection) On(method, channel string, handler Clien
 	c.handlers[key] = append(c.handlers[key], handler)
 }
 
-func (c *ClientUpdateHandlerCollection) updateAll(method, channel string, out *Output) {
-	key := c.key(method, channel)
+func (c *ClientUpdateHandlerCollection) updateAll(out *Output) {
+	key := c.key(out.Method, out.Channel)
 
 	handlers, ok := c.handlers[key]
 

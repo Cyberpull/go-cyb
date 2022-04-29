@@ -5,27 +5,15 @@ import (
 	"time"
 
 	"cyberpull.com/go-cyb/errors"
-	"cyberpull.com/go-cyb/objects"
 	"cyberpull.com/go-cyb/uuid"
 )
 
 type Request struct {
+	BaseData
+
 	UUID    string `json:"uuid" validator:"required"`
 	Method  string `json:"method" validator:"required"`
 	Channel string `json:"channel" validator:"required"`
-	Data    []byte `json:"data" validator:"required"`
-}
-
-func (r *Request) SetData(v any) (err error) {
-	data, err := objects.ToJSON(v)
-
-	if err != nil {
-		return
-	}
-
-	r.Data = data
-
-	return
 }
 
 /*****************************************/

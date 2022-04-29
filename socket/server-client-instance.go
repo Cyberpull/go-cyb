@@ -14,6 +14,7 @@ import (
 type ServerClientInstance struct {
 	srv       *Server
 	ref       *ServerClientRef
+	updater   *ServerClientUpdater
 	sig       chan os.Signal
 	isRunning bool
 	isExiting bool
@@ -62,6 +63,10 @@ func (s *ServerClientInstance) beginInstance() {
 	s.srv.addClientInstance(s)
 
 	defer s.srv.removeClientInstance(s)
+
+	if err = s.srv.execClientInit(s.updater); err != nil {
+		return
+	}
 
 	var input []byte
 
@@ -126,6 +131,10 @@ func (s *ServerClientInstance) processInput(input []byte) {
 	output = handler(ctx)
 }
 
+func (s *ServerClientInstance) Update(args ...any) (err error) {
+	return s.updater.Update(args...)
+}
+
 func (s *ServerClientInstance) Stop() {
 	s.isStopped = true
 	s.sig <- os.Interrupt
@@ -135,7 +144,8 @@ func (s *ServerClientInstance) Stop() {
 
 func newServerClientInstance(srv *Server, ref *ServerClientRef) *ServerClientInstance {
 	return &ServerClientInstance{
-		srv: srv,
-		ref: ref,
+		srv:     srv,
+		ref:     ref,
+		updater: newServerClientUpdater(ref),
 	}
 }

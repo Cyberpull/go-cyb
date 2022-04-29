@@ -117,22 +117,6 @@ func (s *ServerClientRef) writeResponse(output *Output) (err error) {
 	return
 }
 
-func (s *ServerClientRef) writeUpdate(output *Output) (err error) {
-	data := []byte(UpdatePrefix + "::")
-
-	json, err := objects.ToJSON(output)
-
-	if err != nil {
-		return
-	}
-
-	data = append(data, json...)
-
-	_, err = s.Writeln(data)
-
-	return
-}
-
 func (s *ServerClientRef) close() error {
 	return s.conn.Close()
 }

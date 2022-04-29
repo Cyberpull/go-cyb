@@ -37,6 +37,22 @@ func socketRegisterServerHandlers() socket.ServerHandlerSubscriber {
 			return ctx.Success("SUCCESSFUL")
 		})
 
+		subscriber.On("UPDATE_DEMO", "/testing", func(ctx *socket.Context) *socket.Output {
+			var data string
+
+			if err := ctx.ParseData(&data); err != nil {
+				return ctx.Error(err)
+			}
+
+			out := ctx.Success("NEW_UPDATE")
+
+			if err = ctx.Update(out); err != nil {
+				return ctx.Error(err)
+			}
+
+			return ctx.Success("SUCCESSFUL")
+		})
+
 		return
 	}
 }
@@ -184,6 +200,40 @@ func TestSocket_SendFailedRequest(t *testing.T) {
 
 	if resp != "FAILED" {
 		t.Fatalf(`Expected "FAILED", got "%s" instead.`, resp)
+	}
+}
+
+func TestSocket_ReceiveUpdate(t *testing.T) {
+	var err error
+
+	errChan := make(chan error, 1)
+	defer close(errChan)
+
+	var requestData, updateData string
+
+	socketClient.On("UPDATE_DEMO", "/testing", func(out *socket.Output) {
+		errChan <- out.ParseData(&updateData)
+	})
+
+	requestData, err = socket.MakeRequest[string](socketClient, "UPDATE_DEMO", "/testing", "TestData")
+
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	if requestData != "SUCCESSFUL" {
+		t.Fatalf(`Expected "SUCCESSFUL", got "%s" instead.`, requestData)
+		return
+	}
+
+	if err = <-errChan; err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	if updateData != "NEW_UPDATE" {
+		t.Fatalf(`Expected "NEW_UPDATE", got "%s" instead.`, updateData)
 	}
 }
 

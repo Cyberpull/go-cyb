@@ -14,6 +14,7 @@ import (
 )
 
 type ClientAuthSubscriber func(ref *ClientRef) (err error)
+type ClientUpdateSubscriber func(collection *ClientUpdateHandlerCollection) (err error)
 
 type Client struct {
 	uuid                    string
@@ -24,6 +25,7 @@ type Client struct {
 	timeout                 time.Duration
 	opts                    ClientOptions
 	authSubscribers         []ClientAuthSubscriber
+	updateSubscribers       []ClientUpdateSubscriber
 	updateHandlerCollection *ClientUpdateHandlerCollection
 	responseCollection      *ClientResponseCollection
 	isRunningSession        bool
@@ -53,6 +55,34 @@ func (c *Client) execAuth() (err error) {
 	}
 
 	return
+}
+
+func (c *Client) Update(subs ...ClientUpdateSubscriber) {
+	c.updateSubscribers = append(c.updateSubscribers, subs...)
+}
+
+func (c *Client) execUpdate() (err error) {
+	if len(c.authSubscribers) > 0 {
+		log.Magentaln(`Subscribing to updates...`)
+
+		for _, subscriber := range c.updateSubscribers {
+			err = subscriber(c.updateHandlerCollection)
+
+			if err != nil {
+				break
+			}
+		}
+
+		if err == nil {
+			log.Successln("Subscribed")
+		}
+	}
+
+	return
+}
+
+func (c *Client) On(method, channel string, handler ClientUpdateHander) {
+	c.updateHandlerCollection.On(method, channel, handler)
 }
 
 func (c *Client) receiveIdentifier() (err error) {
@@ -144,6 +174,10 @@ func (c *Client) connect() (err error) {
 	}
 
 	if err = c.execAuth(); err != nil {
+		return
+	}
+
+	if err = c.execUpdate(); err != nil {
 		return
 	}
 
@@ -240,10 +274,13 @@ func (c *Client) processData(data []byte) {
 		return
 	}
 
-	if bytes.HasPrefix(data, []byte(ResponsePrefix)) {
-		data = bytes.TrimPrefix(data, []byte(ResponsePrefix))
+	delimIndex := bytes.Index(data, []byte("::"))
+	prefix := string(data[:delimIndex])
+	data = data[delimIndex+2:]
 
-		delimIndex := bytes.Index(data, []byte("::"))
+	switch prefix {
+	case ResponseTxt:
+		delimIndex = bytes.Index(data, []byte("::"))
 
 		if delimIndex < 0 {
 			err = errors.New("Invalid response")
@@ -268,24 +305,18 @@ func (c *Client) processData(data []byte) {
 
 		err = c.responseCollection.Set(requestUUID, out)
 
-		return
-	}
-
-	if bytes.HasPrefix(data, []byte(UpdatePrefix)) {
-		data = bytes.TrimPrefix(data, []byte(UpdatePrefix))
-
+	case UpdateTxt:
 		out := &Output{}
 
 		if err = objects.ParseJSON(data, out); err != nil {
 			return
 		}
 
-		go c.updateHandlerCollection.updateAll(out.Method, out.Channel, out)
+		go c.updateHandlerCollection.updateAll(out)
 
-		return
+	default:
+		err = errors.New("Unable to process data")
 	}
-
-	err = errors.New("Unable to process data")
 }
 
 func (c *Client) request(method, channel string, data any, timeout ...time.Duration) (out *Output, err error) {
@@ -345,6 +376,7 @@ func NewClient(opts ClientOptions) *Client {
 	return &Client{
 		opts:                    opts,
 		authSubscribers:         make([]ClientAuthSubscriber, 0),
+		updateSubscribers:       make([]ClientUpdateSubscriber, 0),
 		updateHandlerCollection: newClientUpdateHandlerCollection(),
 		responseCollection:      newClientResponseCollection(),
 	}
