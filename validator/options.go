@@ -2,23 +2,39 @@ package validator
 
 import (
 	"bytes"
+	"reflect"
 	"strings"
 )
 
 type Validation struct {
 	Name    string
-	Message string
 	Options Options
 }
 
 type Options struct {
-	Required bool
-	Email    bool
+	Required OptionValue
+	Email    OptionValue
+}
+
+func (o Options) message(name OptionName) string {
+	switch name {
+	case Required:
+		return o.Required.Message
+	case Email:
+		return o.Email.Message
+	}
+
+	return ""
+}
+
+type OptionValue struct {
+	Value   bool
+	Message string
 }
 
 /*************************************************/
 
-func parseValidationTag(tag string) *Validation {
+func parseValidationTag(field reflect.StructField, tag string) *Validation {
 	value := &Validation{}
 
 	tagRunes := []rune(tag)
@@ -26,13 +42,16 @@ func parseValidationTag(tag string) *Validation {
 	buff := new(bytes.Buffer)
 
 	for i := 0; i <= length; i++ {
-		if tagRunes[i] == ';' || i == length {
+		if i == length || tagRunes[i] == ';' {
 			parseTagEntry(value, buff.String())
+			buff.Reset()
 			continue
 		}
 
 		buff.WriteRune(tagRunes[i])
 	}
+
+	sanitizeValidation(field, value)
 
 	return value
 }
@@ -44,11 +63,11 @@ func parseTagEntry(v *Validation, entry string) {
 		return
 	}
 
-	if strings.HasPrefix(entry, "message:") {
-		entry = strings.TrimPrefix(entry, "message:")
-		v.Message = strings.TrimSpace(entry)
-		return
-	}
+	// if strings.HasPrefix(entry, "message:") {
+	// 	entry = strings.TrimPrefix(entry, "message:")
+	// 	v.Message = strings.TrimSpace(entry)
+	// 	return
+	// }
 
 	optList := strings.Split(entry, ",")
 
@@ -57,9 +76,21 @@ func parseTagEntry(v *Validation, entry string) {
 
 		switch opt {
 		case "required":
-			v.Options.Required = true
+			v.Options.Required.Value = true
 		case "email":
-			v.Options.Email = true
+			v.Options.Email.Value = true
 		}
 	}
+}
+
+func sanitizeValidation(field reflect.StructField, v *Validation) {
+	if v.Name == "" {
+		v.Name = field.Name
+	}
+
+	sanitizeOptions(field, &v.Options)
+}
+
+func sanitizeOptions(field reflect.StructField, opts *Options) {
+	// ...
 }
