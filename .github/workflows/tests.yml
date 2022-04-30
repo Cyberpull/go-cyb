@@ -19,4 +19,4 @@ jobs:
         go-version: 1.18
 
     - name: Run Go-CYB Tests
-      run: ./test.sh
+      run: bash test.sh
