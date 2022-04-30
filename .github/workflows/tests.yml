@@ -17,8 +17,8 @@ jobs:
       SOCKET_SERVER_HOST: 127.0.0.1
       SOCKET_SERVER_PORT: 1990
       CERT_ENV: local
-      CERT_CRT_FILE: certs/crt.pem
-      CERT_KEY_FILE: certs/key.pem
+      CERT_CRT_FILE: ../certs/crt.pem
+      CERT_KEY_FILE: ../certs/key.pem
     steps:
     - uses: actions/checkout@v3
 
