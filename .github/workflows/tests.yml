@@ -10,6 +10,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    environment: testing
     env:
       CRT_DATA: ${{ secrets.CERT_CRT_FILE }}
       KEY_DATA: ${{ secrets.CERT_KEY_FILE }}
