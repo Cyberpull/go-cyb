@@ -17,6 +17,6 @@ The awesome GO-CYB library for Golang, aims to bring developer friendliness to j
 
 ## License
 
-© Cyberpull, 2022
+&copy; Cyberpull, 2022~time.Now()
 
 Released under the [MIT License](https://github.com/Cyberpull/go-cyb/blob/master/LICENSE)
