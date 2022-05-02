@@ -37,12 +37,19 @@ func (c *Context) Error(v any, code ...int) *Output {
 		return value
 	}
 
+	var ok bool
+	var message string
+
+	if message, ok = v.(string); !ok {
+		message = "Error message most be a string"
+	}
+
 	if len(code) == 0 {
 		code = append(code, 500)
 	}
 
 	value.Code = code[0]
-	value.SetData(v)
+	value.SetData(message)
 
 	return value
 }
