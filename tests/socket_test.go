@@ -191,15 +191,17 @@ func TestSocket_SendSuccessfulRequest(t *testing.T) {
 }
 
 func TestSocket_SendFailedRequest(t *testing.T) {
-	resp, err := socket.MakeRequest[string](socketClient, "DEMO", "/testing", "BadTestData")
+	_, err := socket.MakeRequest[string](socketClient, "DEMO", "/testing", "BadTestData")
 
-	if err != nil {
-		t.Fatal(err)
+	if err == nil {
+		t.Fatal(`Expected an error`)
 		return
 	}
 
-	if resp != "FAILED" {
-		t.Fatalf(`Expected "FAILED", got "%s" instead.`, resp)
+	message := err.Error()
+
+	if message != "FAILED" {
+		t.Fatalf(`Expected "FAILED", got "%s" instead.`, message)
 	}
 }
 

@@ -351,6 +351,10 @@ func (c *Client) request(method, channel string, data any, timeout ...time.Durat
 		return
 	}
 
+	if err = tmpOut.GetError(); err != nil {
+		return
+	}
+
 	out = tmpOut
 
 	return
