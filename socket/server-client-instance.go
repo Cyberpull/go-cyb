@@ -36,7 +36,7 @@ func (s *ServerClientInstance) Start() {
 
 	<-s.sig
 
-	s.ref.conn.Close()
+	s.Stop()
 }
 
 func (s *ServerClientInstance) beginInstance() {
@@ -81,8 +81,6 @@ func (s *ServerClientInstance) beginInstance() {
 
 		go s.processInput(input)
 	}
-
-	s.Stop()
 }
 
 func (s *ServerClientInstance) processInput(input []byte) {
@@ -137,7 +135,7 @@ func (s *ServerClientInstance) Update(args ...any) (err error) {
 
 func (s *ServerClientInstance) Stop() {
 	s.isStopped = true
-	s.sig <- os.Interrupt
+	s.ref.close()
 }
 
 /********************************************/

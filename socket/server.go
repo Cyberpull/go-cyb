@@ -261,14 +261,12 @@ func (s *Server) handleIncomingConnection(conn net.Conn) {
 }
 
 func (s *Server) Stop() error {
-	s.clients.ForEach(func(instance *ServerClientInstance, _ int) {
-		instance.Stop()
-	})
-
 	for {
 		if s.clients.Length() == 0 {
 			break
 		}
+
+		s.clients.Pop().Stop()
 	}
 
 	return s.listener.Close()
