@@ -243,6 +243,8 @@ func (c *Client) runSession() (err error) {
 		c.isRunningSession = false
 	}()
 
+	log.Successln("Session started")
+
 	var data []byte
 
 	for {

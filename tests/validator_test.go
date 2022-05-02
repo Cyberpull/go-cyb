@@ -9,13 +9,13 @@ import (
 const (
 	stringEmptyData   string = ""
 	stringDefaultData string = "default"
-	stringNameData    string = "Christian ezeani"
+	stringNameData    string = "Christian Ezeani"
 	stringEmailData   string = "demo@example.com"
 )
 
 type DemoStructData struct {
-	Name     string `validator:"required;name:Full Name"`
-	Email    string `validator:"required,email;name:Email Address"`
+	Name     string `validator:"required;fieldName:Full Name"`
+	Email    string `validator:"required;email;fieldName:Email Address"`
 	Accepted bool   `validator:"required"`
 	Ignored  bool
 }
