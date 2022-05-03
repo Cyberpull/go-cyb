@@ -49,14 +49,12 @@ func (s *ServerClientInstance) beginInstance() {
 
 		if r := recover(); r != nil {
 			err = errors.From(r)
-		}
-
-		if err != nil {
-			log.Errorfln("ServerClientInstance: %s", err)
+			log.Errorln(err)
 		}
 	}()
 
 	if err = s.ref.sendIdentifier(); err != nil {
+		log.Errorln(err)
 		return
 	}
 
@@ -65,6 +63,7 @@ func (s *ServerClientInstance) beginInstance() {
 	defer s.srv.removeClientInstance(s)
 
 	if err = s.srv.execClientInit(s.updater); err != nil {
+		log.Errorln(err)
 		return
 	}
 
