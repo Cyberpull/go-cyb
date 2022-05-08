@@ -88,9 +88,6 @@ func (s *ServerClientInstance) processInput(input []byte) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.From(r)
-		}
-
-		if err != nil {
 			log.Errorfln("ServerClientInstance: %s", err)
 		}
 	}()
