@@ -137,7 +137,7 @@ func (c *Client) sendClientInformation() (err error) {
 	return
 }
 
-func (c *Client) connect() (err error) {
+func (c *Client) connect(errChan chan error) (err error) {
 	address := address(&c.opts)
 
 	log.Magentafln("Connecting to %s...", address)
@@ -153,6 +153,7 @@ func (c *Client) connect() (err error) {
 
 		if r := recover(); r != nil {
 			err = errors.From(r)
+			write(errChan, err)
 		}
 	}()
 
@@ -160,6 +161,7 @@ func (c *Client) connect() (err error) {
 
 	dialer := &net.Dialer{Timeout: c.timeout}
 	if conn, err = tls.DialWithDialer(dialer, "tcp", address, c.opts.TlsConfig); err != nil {
+		write(errChan, err)
 		return
 	}
 
@@ -170,45 +172,55 @@ func (c *Client) connect() (err error) {
 	log.Successfln("Connected to %s", address)
 
 	if err = c.sendClientInformation(); err != nil {
+		write(errChan, err)
 		return
 	}
 
 	if err = c.execAuth(); err != nil {
+		write(errChan, err)
 		return
 	}
 
 	if err = c.execUpdate(); err != nil {
+		write(errChan, err)
 		return
 	}
 
 	if err = c.receiveIdentifier(); err != nil {
+		write(errChan, err)
 		return
 	}
+
+	write(errChan, nil)
 
 	err = c.runSession()
 
 	return
 }
 
-func (c *Client) Start() {
+func (c *Client) Start(errChan ...chan error) {
 	var err error
+
+	if len(errChan) == 0 {
+		errChan = append(errChan, make(chan error))
+	}
 
 	defer func() {
 		c.isStopped = false
 	}()
 
 	if err = sanitizeNameAndAlias(&c.opts); err != nil {
-		log.Errorln(err)
+		write(errChan[0], err)
 		return
 	}
 
 	if err = sanitizeTlsConfig(&c.opts); err != nil {
-		log.Errorln(err)
+		write(errChan[0], err)
 		return
 	}
 
 	for {
-		if err = c.connect(); err != nil {
+		if err = c.connect(errChan[0]); err != nil {
 			if c.isStopped {
 				break
 			}
@@ -358,20 +370,6 @@ func (c *Client) request(method, channel string, data any, timeout ...time.Durat
 	}
 
 	out = tmpOut
-
-	return
-}
-
-func (c *Client) EnsureStarted() (err error) {
-	for {
-		if c.isRunning && !c.isRunningSession {
-			continue
-		}
-
-		err = c.err
-
-		break
-	}
 
 	return
 }

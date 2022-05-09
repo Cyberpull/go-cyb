@@ -4,7 +4,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	_ "cyberpull.com/go-cyb/env"
 
@@ -140,11 +139,11 @@ func TestSocket_StartServer(t *testing.T) {
 		socketRegisterServerHandlers(),
 	)
 
-	go socketServer.Listen()
+	errChan := make(chan error)
 
-	time.Sleep(time.Second)
+	go socketServer.Listen(errChan)
 
-	err = socketServer.EnsureListening()
+	err = <-errChan
 }
 
 func TestSocket_StartClient(t *testing.T) {
@@ -170,11 +169,11 @@ func TestSocket_StartClient(t *testing.T) {
 		socketRegisterClientAuth(),
 	)
 
-	go socketClient.Start()
+	errChan := make(chan error)
 
-	time.Sleep(time.Second)
+	go socketClient.Start(errChan)
 
-	err = socketClient.EnsureStarted()
+	err = <-errChan
 }
 
 func TestSocket_SendSuccessfulRequest(t *testing.T) {

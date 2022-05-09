@@ -159,45 +159,51 @@ func (s *Server) removeClientInstance(i *ServerClientInstance) {
 	}
 }
 
-func (s *Server) Listen() {
-	s.err = nil
+func (s *Server) Listen(errChan ...chan error) {
+	var err error
+
+	if len(errChan) == 0 {
+		errChan = append(errChan, make(chan error))
+	}
 
 	defer func() {
 		s.isStarting = false
 		s.isListening = false
 
 		if r := recover(); r != nil {
-			s.err = errors.From(r)
-		}
-
-		if s.err != nil {
-			log.Errorln(s.err)
+			err = errors.From(r)
+			write(errChan[0], err)
 		}
 	}()
 
 	s.isStarting = true
 
-	if s.err = sanitizeNameAndAlias(&s.opts); s.err != nil {
+	if err = sanitizeNameAndAlias(&s.opts); err != nil {
+		write(errChan[0], err)
 		return
 	}
 
-	if s.err = s.execBoot(); s.err != nil {
+	if err = s.execBoot(); err != nil {
+		errChan[0] <- err
 		return
 	}
 
-	if s.err = s.execHandlers(); s.err != nil {
+	if err = s.execHandlers(); err != nil {
+		write(errChan[0], err)
 		return
 	}
 
-	if s.err = sanitizeTlsConfig(&s.opts); s.err != nil {
+	if err = sanitizeTlsConfig(&s.opts); err != nil {
+		write(errChan[0], err)
 		return
 	}
 
 	address := address(&s.opts)
 
-	s.listener, s.err = tls.Listen("tcp", address, s.opts.TlsConfig)
+	s.listener, err = tls.Listen("tcp", address, s.opts.TlsConfig)
 
-	if s.err != nil {
+	if err != nil {
+		write(errChan[0], err)
 		return
 	}
 
@@ -207,6 +213,8 @@ func (s *Server) Listen() {
 	defer s.listener.Close()
 
 	log.Successfln("%s listening on %s", s.opts.Name, address)
+
+	write(errChan[0], nil)
 
 	var conn net.Conn
 
@@ -280,20 +288,6 @@ func (s *Server) UpdateAll(args ...any) {
 
 func (s *Server) IsListening() bool {
 	return s.isListening
-}
-
-func (s *Server) EnsureListening() (err error) {
-	for {
-		if s.isStarting {
-			continue
-		}
-
-		err = s.err
-
-		break
-	}
-
-	return
 }
 
 /****************************************************/
