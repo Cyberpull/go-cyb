@@ -216,7 +216,7 @@ func (c *Client) Start(errChan ...chan error) {
 	}
 
 	for {
-		if err = c.connect(errChan[0]); err != nil {
+		if err = c.connect(errChan...); err != nil {
 			if c.isStopped {
 				break
 			}
