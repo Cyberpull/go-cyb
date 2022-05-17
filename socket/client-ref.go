@@ -15,16 +15,22 @@ type ClientRef struct {
 	mutex  sync.Mutex
 }
 
-func (c *ClientRef) checkAndValidateInstance() {
+func (c *ClientRef) checkAndValidateInstance() (err error) {
 	if c.conn == nil || c.reader == nil {
-		err := errors.Newf("ClientRef not properly instanciated")
-		panic(err)
+		err = errors.Newf("ClientRef not properly instantiated")
 	}
+
+	return
 }
 
-func (c *ClientRef) Write(b []byte) (int, error) {
-	c.checkAndValidateInstance()
-	return c.conn.Write(b)
+func (c *ClientRef) Write(b []byte) (i int, err error) {
+	if err = c.checkAndValidateInstance(); err != nil {
+		return
+	}
+
+	i, err = c.conn.Write(b)
+
+	return
 }
 
 func (c *ClientRef) WriteString(d string) (int, error) {
@@ -39,14 +45,24 @@ func (c *ClientRef) WriteStringln(d string) (int, error) {
 	return c.Writeln([]byte(d))
 }
 
-func (c *ClientRef) ReadBytes(delim byte) ([]byte, error) {
-	c.checkAndValidateInstance()
-	return c.reader.ReadBytes(delim)
+func (c *ClientRef) ReadBytes(delim byte) (value []byte, err error) {
+	if err = c.checkAndValidateInstance(); err != nil {
+		return
+	}
+
+	value, err = c.reader.ReadBytes(delim)
+
+	return
 }
 
-func (c *ClientRef) ReadString(delim byte) (string, error) {
-	c.checkAndValidateInstance()
-	return c.reader.ReadString(delim)
+func (c *ClientRef) ReadString(delim byte) (value string, err error) {
+	if err = c.checkAndValidateInstance(); err != nil {
+		return
+	}
+
+	value, err = c.reader.ReadString(delim)
+
+	return
 }
 
 func (c *ClientRef) checkError(data []byte) (err error) {
