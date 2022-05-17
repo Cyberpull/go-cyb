@@ -162,39 +162,35 @@ func (s *Server) removeClientInstance(i *ServerClientInstance) {
 func (s *Server) Listen(errChan ...chan error) {
 	var err error
 
-	if len(errChan) == 0 {
-		errChan = append(errChan, make(chan error))
-	}
-
 	defer func() {
 		s.isStarting = false
 		s.isListening = false
 
 		if r := recover(); r != nil {
 			err = errors.From(r)
-			write(errChan[0], err)
+			writeOne(errChan, err)
 		}
 	}()
 
 	s.isStarting = true
 
 	if err = sanitizeNameAndAlias(&s.opts); err != nil {
-		write(errChan[0], err)
+		writeOne(errChan, err)
 		return
 	}
 
 	if err = s.execBoot(); err != nil {
-		errChan[0] <- err
+		writeOne(errChan, err)
 		return
 	}
 
 	if err = s.execHandlers(); err != nil {
-		write(errChan[0], err)
+		writeOne(errChan, err)
 		return
 	}
 
 	if err = sanitizeTlsConfig(&s.opts); err != nil {
-		write(errChan[0], err)
+		writeOne(errChan, err)
 		return
 	}
 
@@ -203,7 +199,7 @@ func (s *Server) Listen(errChan ...chan error) {
 	s.listener, err = tls.Listen("tcp", address, s.opts.TlsConfig)
 
 	if err != nil {
-		write(errChan[0], err)
+		writeOne(errChan, err)
 		return
 	}
 
@@ -214,7 +210,7 @@ func (s *Server) Listen(errChan ...chan error) {
 
 	log.Successfln("%s listening on %s", s.opts.Name, address)
 
-	write(errChan[0], nil)
+	writeOne(errChan, nil)
 
 	var conn net.Conn
 

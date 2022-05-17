@@ -17,7 +17,7 @@ type ClientRef struct {
 
 func (c *ClientRef) checkAndValidateInstance() (err error) {
 	if c.conn == nil || c.reader == nil {
-		err = errors.Newf("ClientRef not properly instantiated")
+		err = errors.New("ClientRef not properly instantiated")
 	}
 
 	return

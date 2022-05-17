@@ -137,7 +137,7 @@ func (c *Client) sendClientInformation() (err error) {
 	return
 }
 
-func (c *Client) connect(errChan chan error) (err error) {
+func (c *Client) connect(errChan ...chan error) (err error) {
 	address := address(&c.opts)
 
 	log.Magentafln("Connecting to %s...", address)
@@ -153,7 +153,7 @@ func (c *Client) connect(errChan chan error) (err error) {
 
 		if r := recover(); r != nil {
 			err = errors.From(r)
-			write(errChan, err)
+			writeOne(errChan, err)
 		}
 	}()
 
@@ -161,7 +161,7 @@ func (c *Client) connect(errChan chan error) (err error) {
 
 	dialer := &net.Dialer{Timeout: c.timeout}
 	if conn, err = tls.DialWithDialer(dialer, "tcp", address, c.opts.TlsConfig); err != nil {
-		write(errChan, err)
+		writeOne(errChan, err)
 		return
 	}
 
@@ -172,26 +172,26 @@ func (c *Client) connect(errChan chan error) (err error) {
 	log.Successfln("Connected to %s", address)
 
 	if err = c.sendClientInformation(); err != nil {
-		write(errChan, err)
+		writeOne(errChan, err)
 		return
 	}
 
 	if err = c.execAuth(); err != nil {
-		write(errChan, err)
+		writeOne(errChan, err)
 		return
 	}
 
 	if err = c.execUpdate(); err != nil {
-		write(errChan, err)
+		writeOne(errChan, err)
 		return
 	}
 
 	if err = c.receiveIdentifier(); err != nil {
-		write(errChan, err)
+		writeOne(errChan, err)
 		return
 	}
 
-	write(errChan, nil)
+	writeOne(errChan, nil)
 
 	err = c.runSession()
 
@@ -201,21 +201,17 @@ func (c *Client) connect(errChan chan error) (err error) {
 func (c *Client) Start(errChan ...chan error) {
 	var err error
 
-	if len(errChan) == 0 {
-		errChan = append(errChan, make(chan error))
-	}
-
 	defer func() {
 		c.isStopped = false
 	}()
 
 	if err = sanitizeNameAndAlias(&c.opts); err != nil {
-		write(errChan[0], err)
+		writeOne(errChan, err)
 		return
 	}
 
 	if err = sanitizeTlsConfig(&c.opts); err != nil {
-		write(errChan[0], err)
+		writeOne(errChan, err)
 		return
 	}
 
