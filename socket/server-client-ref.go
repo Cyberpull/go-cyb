@@ -16,6 +16,7 @@ type ServerClientRef struct {
 	uuid   string
 	name   string
 	alias  string
+	opts   ServerOptions
 	mutex  sync.Mutex
 	conn   net.Conn
 	reader *bufio.Reader
@@ -123,9 +124,10 @@ func (s *ServerClientRef) close() error {
 
 /**********************************************/
 
-func newServerClientRef(conn net.Conn) (value *ServerClientRef, err error) {
+func newServerClientRef(conn net.Conn, opts ServerOptions) (value *ServerClientRef, err error) {
 	tmpValue := &ServerClientRef{
 		conn:   conn,
+		opts:   opts,
 		reader: bufio.NewReader(conn),
 	}
 
@@ -138,6 +140,14 @@ func newServerClientRef(conn net.Conn) (value *ServerClientRef, err error) {
 	}
 
 	if err = getServerClientRefAlias(tmpValue); err != nil {
+		return
+	}
+
+	if err = sendServerRefName(tmpValue); err != nil {
+		return
+	}
+
+	if err = sendServerRefAlias(tmpValue); err != nil {
 		return
 	}
 
@@ -186,6 +196,44 @@ func getServerClientRefAlias(ref *ServerClientRef) (err error) {
 	}
 
 	ref.alias = input
+
+	return
+}
+
+func sendServerRefName(ref *ServerClientRef) (err error) {
+	var input string
+
+	if input, err = ref.ReadString('\n'); err != nil {
+		return
+	}
+
+	input = strings.TrimSpace(input)
+
+	if input != "SERVER NAME:" {
+		err = errors.Newf(`Expected "SERVER NAME:", got "%s" instead`, input)
+		return
+	}
+
+	_, err = ref.WriteStringln(ref.opts.Name)
+
+	return
+}
+
+func sendServerRefAlias(ref *ServerClientRef) (err error) {
+	var input string
+
+	if input, err = ref.ReadString('\n'); err != nil {
+		return
+	}
+
+	input = strings.TrimSpace(input)
+
+	if input != "SERVER ALIAS:" {
+		err = errors.Newf(`Expected "SERVER NAME:", got "%s" instead`, input)
+		return
+	}
+
+	_, err = ref.WriteStringln(ref.opts.Alias)
 
 	return
 }

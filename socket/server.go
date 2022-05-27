@@ -40,8 +40,6 @@ func (s *Server) Boot(subs ...ServerBootSubscriber) {
 }
 
 func (s *Server) execBoot() (err error) {
-	log.Magentafln("Booting up %s...", s.opts.Name)
-
 	for _, subscriber := range s.bootSubscribers {
 		err = subscriber()
 
@@ -49,8 +47,6 @@ func (s *Server) execBoot() (err error) {
 			break
 		}
 	}
-
-	log.Successln("Booting completed")
 
 	return
 }
@@ -60,8 +56,6 @@ func (s *Server) Handlers(subs ...ServerHandlerSubscriber) {
 }
 
 func (s *Server) execHandlers() (err error) {
-	log.Magentafln("Registering handlers for %s...", s.opts.Name)
-
 	for _, subscriber := range s.handlerSubscribers {
 		err = subscriber(s.handlerCollection)
 
@@ -69,8 +63,6 @@ func (s *Server) execHandlers() (err error) {
 			break
 		}
 	}
-
-	log.Successln("Registering of handlers completed")
 
 	return
 }
@@ -245,7 +237,7 @@ func (s *Server) handleIncomingConnection(conn net.Conn) {
 		}
 	}()
 
-	if ref, err = newServerClientRef(conn); err != nil {
+	if ref, err = newServerClientRef(conn, s.opts); err != nil {
 		return
 	}
 

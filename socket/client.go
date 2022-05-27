@@ -24,6 +24,8 @@ type Client struct {
 	mutex                   sync.Mutex
 	timeout                 time.Duration
 	opts                    ClientOptions
+	serverName              string
+	serverAlias             string
 	authSubscribers         []ClientAuthSubscriber
 	updateSubscribers       []ClientUpdateSubscriber
 	updateHandlerCollection *ClientUpdateHandlerCollection
@@ -39,18 +41,12 @@ func (c *Client) Auth(subs ...ClientAuthSubscriber) {
 
 func (c *Client) execAuth() (err error) {
 	if len(c.authSubscribers) > 0 {
-		log.Magentafln(`Authorizing %s...`, c.opts.Name)
-
 		for _, subscriber := range c.authSubscribers {
 			err = subscriber(c.ref)
 
 			if err != nil {
 				break
 			}
-		}
-
-		if err == nil {
-			log.Successln("Authorized")
 		}
 	}
 
@@ -63,18 +59,12 @@ func (c *Client) Update(subs ...ClientUpdateSubscriber) {
 
 func (c *Client) execUpdate() (err error) {
 	if len(c.authSubscribers) > 0 {
-		log.Magentaln(`Subscribing to updates...`)
-
 		for _, subscriber := range c.updateSubscribers {
 			err = subscriber(c.updateHandlerCollection)
 
 			if err != nil {
 				break
 			}
-		}
-
-		if err == nil {
-			log.Successln("Subscribed")
 		}
 	}
 
@@ -86,8 +76,6 @@ func (c *Client) On(method, channel string, handler ClientUpdateHander) {
 }
 
 func (c *Client) receiveIdentifier() (err error) {
-	log.Magentafln("Receiving identifier for %s...", c.opts.Name)
-
 	var (
 		data   []byte
 		prefix string = "UUID "
@@ -116,14 +104,10 @@ func (c *Client) receiveIdentifier() (err error) {
 
 	c.uuid = string(data)
 
-	log.Successln("Received identifier")
-
 	return
 }
 
 func (c *Client) sendClientInformation() (err error) {
-	log.Magentafln("Registering %s...", c.opts.Name)
-
 	if err = sendClientName(c); err != nil {
 		return
 	}
@@ -132,7 +116,17 @@ func (c *Client) sendClientInformation() (err error) {
 		return
 	}
 
-	log.Successln("Registered")
+	return
+}
+
+func (c *Client) getServerInformation() (err error) {
+	if err = getServerName(c); err != nil {
+		return
+	}
+
+	if err = getServerAlias(c); err != nil {
+		return
+	}
 
 	return
 }
@@ -169,9 +163,12 @@ func (c *Client) connect(errChan ...chan error) (err error) {
 
 	defer c.ref.close()
 
-	log.Successfln("Connected to %s", address)
-
 	if err = c.sendClientInformation(); err != nil {
+		writeOne(errChan, err)
+		return
+	}
+
+	if err = c.getServerInformation(); err != nil {
 		writeOne(errChan, err)
 		return
 	}
@@ -203,6 +200,7 @@ func (c *Client) Start(errChan ...chan error) {
 
 	defer func() {
 		c.isStopped = false
+		c.isRunningSession = false
 	}()
 
 	if err = sanitizeNameAndAlias(&c.opts); err != nil {
@@ -217,7 +215,7 @@ func (c *Client) Start(errChan ...chan error) {
 
 	for {
 		if err = c.connect(errChan...); err != nil {
-			if c.isStopped {
+			if c.isStopped || !c.isRunningSession {
 				break
 			}
 
@@ -247,11 +245,9 @@ func (c *Client) Stop() (err error) {
 func (c *Client) runSession() (err error) {
 	c.isRunningSession = true
 
-	defer func() {
-		c.isRunningSession = false
-	}()
+	address := address(&c.opts)
 
-	log.Successln("Session started")
+	log.Successfln("Connected to %s at %s", c.serverName, address)
 
 	var data []byte
 
@@ -416,6 +412,48 @@ func sendClientAlias(c *Client) (err error) {
 	}
 
 	_, err = c.ref.WriteStringln(c.opts.Alias)
+
+	return
+}
+
+func getServerName(c *Client) (err error) {
+	var data string
+
+	if _, err = c.ref.WriteStringln("SERVER NAME:"); err != nil {
+		return
+	}
+
+	if data, err = c.ref.ReadString('\n'); err != nil {
+		return
+	}
+
+	if data = strings.TrimSpace(data); data == "" {
+		err = errors.New("Invalid server name")
+		return
+	}
+
+	c.serverName = data
+
+	return
+}
+
+func getServerAlias(c *Client) (err error) {
+	var data string
+
+	if _, err = c.ref.WriteStringln("SERVER ALIAS:"); err != nil {
+		return
+	}
+
+	if data, err = c.ref.ReadString('\n'); err != nil {
+		return
+	}
+
+	if data = strings.TrimSpace(data); data == "" {
+		err = errors.New("Invalid server alias")
+		return
+	}
+
+	c.serverAlias = data
 
 	return
 }
