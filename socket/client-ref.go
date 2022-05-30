@@ -3,14 +3,14 @@ package socket
 import (
 	"bufio"
 	"bytes"
-	"crypto/tls"
+	"net"
 	"sync"
 
 	"cyberpull.com/go-cyb/errors"
 )
 
 type ClientRef struct {
-	conn   *tls.Conn
+	conn   net.Conn
 	reader *bufio.Reader
 	mutex  sync.Mutex
 }
@@ -88,7 +88,7 @@ func (c *ClientRef) close() error {
 
 /**********************************************/
 
-func newClientRef(conn *tls.Conn) *ClientRef {
+func newClientRef(conn net.Conn) *ClientRef {
 	return &ClientRef{
 		conn:   conn,
 		reader: bufio.NewReader(conn),

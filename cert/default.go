@@ -6,38 +6,68 @@ import (
 	"strings"
 
 	_ "cyberpull.com/go-cyb/env"
+
+	"cyberpull.com/go-cyb/errors"
 )
 
 var (
-	certEnv  string
-	certFile string
-	keyFile  string
+	certEnabled string
+	certEnv     string
+	certFile    string
+	keyFile     string
 )
 
 func init() {
-	certEnv = os.Getenv("CERT_ENV")
-	certEnv = strings.ToLower(certEnv)
+	certEnabled = os.Getenv("CERT_ENABLED")
+	certEnabled = strings.ToLower(certEnabled)
 
-	certFile = os.Getenv("CERT_CRT_FILE")
-	keyFile = os.Getenv("CERT_KEY_FILE")
+	if IsEnabled() {
+		certEnv = os.Getenv("CERT_ENV")
+		certEnv = strings.ToLower(certEnv)
 
-	if certFile == "" {
-		panic(`"CERT_CRT_FILE" environment variable is required`)
-	}
-
-	if keyFile == "" {
-		panic(`"CERT_KEY_FILE" environment variable is required`)
+		certFile = os.Getenv("CERT_CRT_FILE")
+		keyFile = os.Getenv("CERT_KEY_FILE")
 	}
 }
 
-func GetTLSConfig() (config *tls.Config, err error) {
-	certs, err := GetCertificates()
-
-	config = &tls.Config{
-		Certificates: certs,
+func validate() (err error) {
+	if certFile == "" || keyFile == "" {
+		err = errors.New(`"CERT_CRT_FILE" and "CERT_KEY_FILE" environment variables are required`)
 	}
 
-	if certEnv == "local" {
+	return
+}
+
+func IsEnabled() bool {
+	return certEnabled == "yes"
+}
+
+func IsLocal() bool {
+	return certEnv == "local"
+}
+
+func GetTLSConfig(forServer ...bool) (config *tls.Config, err error) {
+	config = &tls.Config{}
+
+	if IsEnabled() {
+		config.Certificates, err = GetCertificates()
+		err = SanitizeTlsConfig(config, forServer...)
+	}
+
+	return
+}
+
+func SanitizeTlsConfig(config *tls.Config, forServer ...bool) (err error) {
+	if config == nil {
+		err = errors.New("No config found.")
+		return
+	}
+
+	if len(forServer) == 0 {
+		forServer = append(forServer, false)
+	}
+
+	if !forServer[0] && IsLocal() {
 		config.InsecureSkipVerify = true
 		config.VerifyPeerCertificate = nil
 		config.VerifyConnection = nil
@@ -47,6 +77,10 @@ func GetTLSConfig() (config *tls.Config, err error) {
 }
 
 func GetCertificates() (value []tls.Certificate, err error) {
+	if err = validate(); err != nil {
+		return
+	}
+
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 
 	if err != nil {

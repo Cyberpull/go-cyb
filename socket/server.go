@@ -5,6 +5,7 @@ import (
 	"net"
 	"sync"
 
+	"cyberpull.com/go-cyb/cert"
 	"cyberpull.com/go-cyb/errors"
 	"cyberpull.com/go-cyb/log"
 	"cyberpull.com/go-cyb/objects"
@@ -188,7 +189,11 @@ func (s *Server) Listen(errChan ...chan error) {
 
 	address := address(&s.opts)
 
-	s.listener, err = tls.Listen("tcp", address, s.opts.TlsConfig)
+	if cert.IsEnabled() {
+		s.listener, err = tls.Listen("tcp", address, s.opts.TlsConfig)
+	} else {
+		s.listener, err = net.Listen("tcp", address)
+	}
 
 	if err != nil {
 		writeOne(errChan, err)

@@ -9,10 +9,12 @@ import (
 )
 
 func TestCert_GetCertificates(t *testing.T) {
-	_, err := cert.GetCertificates()
+	if cert.IsEnabled() {
+		_, err := cert.GetCertificates()
 
-	if err != nil {
-		t.Error(err)
+		if err != nil {
+			t.Error(err)
+		}
 	}
 }
 

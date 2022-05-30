@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"cyberpull.com/go-cyb/cert"
 	"cyberpull.com/go-cyb/errors"
 	"cyberpull.com/go-cyb/log"
 	"cyberpull.com/go-cyb/objects"
@@ -151,10 +152,16 @@ func (c *Client) connect(errChan ...chan error) (err error) {
 		}
 	}()
 
-	var conn *tls.Conn
+	var conn net.Conn
 
-	dialer := &net.Dialer{Timeout: c.timeout}
-	if conn, err = tls.DialWithDialer(dialer, "tcp", address, c.opts.TlsConfig); err != nil {
+	if cert.IsEnabled() {
+		dialer := &net.Dialer{Timeout: c.timeout}
+		conn, err = tls.DialWithDialer(dialer, "tcp", address, c.opts.TlsConfig)
+	} else {
+		conn, err = net.DialTimeout("tcp", address, c.timeout)
+	}
+
+	if err != nil {
 		writeOne(errChan, err)
 		return
 	}
@@ -188,9 +195,7 @@ func (c *Client) connect(errChan ...chan error) (err error) {
 		return
 	}
 
-	writeOne(errChan, nil)
-
-	err = c.runSession()
+	err = c.runSession(errChan...)
 
 	return
 }
@@ -204,11 +209,6 @@ func (c *Client) Start(errChan ...chan error) {
 	}()
 
 	if err = sanitizeNameAndAlias(&c.opts); err != nil {
-		writeOne(errChan, err)
-		return
-	}
-
-	if err = sanitizeTlsConfig(&c.opts); err != nil {
 		writeOne(errChan, err)
 		return
 	}
@@ -242,12 +242,14 @@ func (c *Client) Stop() (err error) {
 	return
 }
 
-func (c *Client) runSession() (err error) {
+func (c *Client) runSession(errChan ...chan error) (err error) {
 	c.isRunningSession = true
 
 	address := address(&c.opts)
 
 	log.Successfln("Connected to %s at %s", c.serverName, address)
+
+	writeOne(errChan, nil)
 
 	var data []byte
 

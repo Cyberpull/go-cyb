@@ -38,19 +38,22 @@ func sanitizeNameAndAlias(opts Options) (err error) {
 	return
 }
 
-func sanitizeTlsConfig(opts Options) (err error) {
-	if opts.tlsConfig() == nil {
+func sanitizeTlsConfig(opts Options, forServer ...bool) (err error) {
+	if cert.IsEnabled() {
 		var config *tls.Config
 
-		if config, err = cert.GetTLSConfig(); err != nil {
+		if config, err = cert.GetTLSConfig(forServer...); err != nil {
 			return
 		}
 
-		opts.setTlsConfig(config)
-	}
+		if opts.tlsConfig() == nil {
+			opts.setTlsConfig(config)
+		}
 
-	if opts.tlsConfig().Certificates == nil || len(opts.tlsConfig().Certificates) == 0 {
-		opts.tlsConfig().Certificates, err = cert.GetCertificates()
+		if opts.tlsConfig().Certificates == nil || len(opts.tlsConfig().Certificates) == 0 {
+			opts.tlsConfig().Certificates, err = cert.GetCertificates()
+			cert.SanitizeTlsConfig(opts.tlsConfig(), forServer...)
+		}
 	}
 
 	return

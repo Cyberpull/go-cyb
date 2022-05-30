@@ -12,13 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: testing
     env:
-      CRT_DATA: ${{ secrets.CERT_CRT_FILE }}
-      KEY_DATA: ${{ secrets.CERT_KEY_FILE }}
       SOCKET_SERVER_HOST: 127.0.0.1
-      SOCKET_SERVER_PORT: 1990
-      CERT_ENV: local
-      CERT_CRT_FILE: ../certs/crt.pem
-      CERT_KEY_FILE: ../certs/key.pem
+      SOCKET_SERVER_PORT: 2022
     steps:
     - uses: actions/checkout@v3
 
@@ -26,9 +21,6 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: 1.18
-
-    - name: Make Certificates
-      run: bash mkcert.sh
 
     - name: Run Go-CYB Tests
       run: bash test.sh
