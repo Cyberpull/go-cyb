@@ -15,7 +15,7 @@ func Get[T any](g Getter, key string) (value T, err error) {
 	var tmpValue any
 
 	if tmpValue, ok = g.Get(key); !ok {
-		err = errors.Newf(`Key "%s" does not exist`, key)
+		err = errors.Newf(`Key "%s" does not exist`, 500, key)
 		return
 	}
 
