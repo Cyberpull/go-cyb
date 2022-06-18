@@ -112,6 +112,29 @@ func socketRegisterClientAuth() socket.ClientAuthSubscriber {
 	}
 }
 
+func socketServerClientInit() socket.ServerClientInitHandler {
+	return func(updater *socket.ServerClientUpdater) (err error) {
+		updater.Update("INIT_UPDATE_DEMO", "/testing", "TestData::ClientInit")
+		return
+	}
+}
+
+func socketClientUpdate() socket.ClientUpdateSubscriber {
+	return func(collection *socket.ClientUpdateHandlerCollection) (err error) {
+		collection.On("INIT_UPDATE_DEMO", "/testing", func(out *socket.Output) {
+			var data string
+
+			if err := out.ParseData(&data); err != nil {
+				return
+			}
+
+			log.Printfln("Client Init Update: %s", data)
+		})
+
+		return
+	}
+}
+
 func TestSocket_StartServer(t *testing.T) {
 	var err error
 
@@ -133,6 +156,10 @@ func TestSocket_StartServer(t *testing.T) {
 
 	socketServer.Auth(
 		socketRegisterServerAuth(),
+	)
+
+	socketServer.ClientInit(
+		socketServerClientInit(),
 	)
 
 	socketServer.Handlers(
@@ -167,6 +194,10 @@ func TestSocket_StartClient(t *testing.T) {
 
 	socketClient.Auth(
 		socketRegisterClientAuth(),
+	)
+
+	socketClient.Update(
+		socketClientUpdate(),
 	)
 
 	errChan := make(chan error)

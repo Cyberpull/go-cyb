@@ -3,8 +3,6 @@ package socket
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"os/signal"
 
 	"cyberpull.com/go-cyb/errors"
 	"cyberpull.com/go-cyb/log"
@@ -15,7 +13,6 @@ type ServerClientInstance struct {
 	srv       *Server
 	ref       *ServerClientRef
 	updater   *ServerClientUpdater
-	sig       chan os.Signal
 	isRunning bool
 	isExiting bool
 	isStopped bool
@@ -23,20 +20,7 @@ type ServerClientInstance struct {
 
 func (s *ServerClientInstance) Start() {
 	s.isRunning = true
-
-	s.sig = make(chan os.Signal, 1)
-	signal.Notify(s.sig, os.Interrupt)
-
-	defer func() {
-		signal.Stop(s.sig)
-		close(s.sig)
-	}()
-
-	go s.beginInstance()
-
-	<-s.sig
-
-	s.Stop()
+	s.beginInstance()
 }
 
 func (s *ServerClientInstance) beginInstance() {
