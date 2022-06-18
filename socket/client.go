@@ -152,6 +152,11 @@ func (c *Client) connect(errChan ...chan error) (err error) {
 		}
 	}()
 
+	if err = c.execUpdate(); err != nil {
+		writeOne(errChan, err)
+		return
+	}
+
 	var conn net.Conn
 
 	if cert.IsEnabled() {
@@ -181,11 +186,6 @@ func (c *Client) connect(errChan ...chan error) (err error) {
 	}
 
 	if err = c.execAuth(); err != nil {
-		writeOne(errChan, err)
-		return
-	}
-
-	if err = c.execUpdate(); err != nil {
 		writeOne(errChan, err)
 		return
 	}
