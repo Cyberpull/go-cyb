@@ -28,7 +28,6 @@ type Client struct {
 	serverName              string
 	serverAlias             string
 	authSubscribers         []ClientAuthSubscriber
-	updateSubscribers       []ClientUpdateSubscriber
 	updateHandlerCollection *ClientUpdateHandlerCollection
 	responseCollection      *ClientResponseCollection
 	isRunningSession        bool
@@ -55,24 +54,12 @@ func (c *Client) execAuth() (err error) {
 }
 
 func (c *Client) Update(subs ...ClientUpdateSubscriber) {
-	c.updateSubscribers = append(c.updateSubscribers, subs...)
-}
-
-func (c *Client) execUpdate() (err error) {
-	if len(c.authSubscribers) > 0 {
-		for _, subscriber := range c.updateSubscribers {
-			err = subscriber(c.updateHandlerCollection)
-
-			if err != nil {
-				break
-			}
-		}
+	for _, subscriber := range subs {
+		subscriber(c.updateHandlerCollection)
 	}
-
-	return
 }
 
-func (c *Client) On(method, channel string, handler ClientUpdateHander) {
+func (c *Client) On(method, channel string, handler ClientUpdateHandler) {
 	c.updateHandlerCollection.On(method, channel, handler)
 }
 
@@ -151,11 +138,6 @@ func (c *Client) connect(errChan ...chan error) (err error) {
 			writeOne(errChan, err)
 		}
 	}()
-
-	if err = c.execUpdate(); err != nil {
-		writeOne(errChan, err)
-		return
-	}
 
 	var conn net.Conn
 
@@ -320,7 +302,7 @@ func (c *Client) processData(data []byte) {
 			return
 		}
 
-		go c.updateHandlerCollection.updateAll(out)
+		c.updateHandlerCollection.updateAll(out)
 
 	default:
 		err = errors.New("Unable to process data")
@@ -374,7 +356,6 @@ func NewClient(opts ClientOptions) *Client {
 	return &Client{
 		opts:                    opts,
 		authSubscribers:         make([]ClientAuthSubscriber, 0),
-		updateSubscribers:       make([]ClientUpdateSubscriber, 0),
 		updateHandlerCollection: newClientUpdateHandlerCollection(),
 		responseCollection:      newClientResponseCollection(),
 	}

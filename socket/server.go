@@ -121,8 +121,8 @@ func (s *Server) ClientInit(handlers ...ServerClientInitHandler) {
 }
 
 func (s *Server) execClientInit(updater *ServerClientUpdater) (err error) {
-	for _, subscriber := range s.clientInitHandlers {
-		err = subscriber(updater)
+	for _, handler := range s.clientInitHandlers {
+		err = handler(updater)
 
 		if err != nil {
 			break

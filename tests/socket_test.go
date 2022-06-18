@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	_ "cyberpull.com/go-cyb/env"
 
@@ -205,6 +206,8 @@ func TestSocket_StartClient(t *testing.T) {
 	go socketClient.Start(errChan)
 
 	err = <-errChan
+
+	time.Sleep(time.Second * 5)
 }
 
 func TestSocket_SendSuccessfulRequest(t *testing.T) {

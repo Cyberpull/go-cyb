@@ -2,10 +2,10 @@ package socket
 
 import "strings"
 
-type ClientUpdateHander func(out *Output)
+type ClientUpdateHandler func(out *Output)
 
 type ClientUpdateHandlerCollection struct {
-	handlers map[string][]ClientUpdateHander
+	handlers map[string][]ClientUpdateHandler
 }
 
 func (c *ClientUpdateHandlerCollection) key(method, channel string) string {
@@ -13,11 +13,11 @@ func (c *ClientUpdateHandlerCollection) key(method, channel string) string {
 	return method + "::" + channel
 }
 
-func (c *ClientUpdateHandlerCollection) On(method, channel string, handler ClientUpdateHander) {
+func (c *ClientUpdateHandlerCollection) On(method, channel string, handler ClientUpdateHandler) {
 	key := c.key(method, channel)
 
 	if _, ok := c.handlers[key]; !ok {
-		c.handlers[key] = make([]ClientUpdateHander, 0)
+		c.handlers[key] = make([]ClientUpdateHandler, 0)
 	}
 
 	c.handlers[key] = append(c.handlers[key], handler)
@@ -41,6 +41,6 @@ func (c *ClientUpdateHandlerCollection) updateAll(out *Output) {
 
 func newClientUpdateHandlerCollection() *ClientUpdateHandlerCollection {
 	return &ClientUpdateHandlerCollection{
-		handlers: make(map[string][]ClientUpdateHander),
+		handlers: make(map[string][]ClientUpdateHandler),
 	}
 }
