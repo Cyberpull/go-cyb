@@ -187,7 +187,6 @@ func (c *Client) Start(errChan ...chan error) {
 
 	defer func() {
 		c.isStopped = false
-		c.isRunningSession = false
 	}()
 
 	if err = sanitizeNameAndAlias(&c.opts); err != nil {
@@ -197,7 +196,7 @@ func (c *Client) Start(errChan ...chan error) {
 
 	for {
 		if err = c.connect(errChan...); err != nil {
-			if c.isStopped || !c.isRunningSession {
+			if c.isStopped {
 				break
 			}
 
@@ -226,6 +225,10 @@ func (c *Client) Stop() (err error) {
 
 func (c *Client) runSession(errChan ...chan error) (err error) {
 	c.isRunningSession = true
+
+	defer func() {
+		c.isRunningSession = false
+	}()
 
 	address := address(&c.opts)
 
@@ -310,6 +313,16 @@ func (c *Client) processData(data []byte) {
 }
 
 func (c *Client) request(method, channel string, data any, timeout ...time.Duration) (out *Output, err error) {
+	if c.ref == nil {
+		err = errors.New("ClientRef not found")
+		return
+	}
+
+	if !c.isRunningSession {
+		err = errors.New("Session not started")
+		return
+	}
+
 	method = strings.ToUpper(method)
 
 	var request *Request

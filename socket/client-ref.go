@@ -15,7 +15,7 @@ type ClientRef struct {
 	mutex  sync.Mutex
 }
 
-func (c *ClientRef) checkAndValidateInstance() (err error) {
+func (c *ClientRef) validate() (err error) {
 	if c.conn == nil || c.reader == nil {
 		err = errors.New("ClientRef not properly instantiated")
 	}
@@ -24,7 +24,7 @@ func (c *ClientRef) checkAndValidateInstance() (err error) {
 }
 
 func (c *ClientRef) Write(b []byte) (i int, err error) {
-	if err = c.checkAndValidateInstance(); err != nil {
+	if err = c.validate(); err != nil {
 		return
 	}
 
@@ -46,7 +46,7 @@ func (c *ClientRef) WriteStringln(d string) (int, error) {
 }
 
 func (c *ClientRef) ReadBytes(delim byte) (value []byte, err error) {
-	if err = c.checkAndValidateInstance(); err != nil {
+	if err = c.validate(); err != nil {
 		return
 	}
 
@@ -56,7 +56,7 @@ func (c *ClientRef) ReadBytes(delim byte) (value []byte, err error) {
 }
 
 func (c *ClientRef) ReadString(delim byte) (value string, err error) {
-	if err = c.checkAndValidateInstance(); err != nil {
+	if err = c.validate(); err != nil {
 		return
 	}
 
