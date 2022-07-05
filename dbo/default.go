@@ -6,12 +6,28 @@ import (
 	"gorm.io/gorm"
 )
 
+type TxScope func(*gorm.DB) (tx *gorm.DB)
 type TxFunction func(tx *TxDB) error
 
 type TxDB struct {
 	*gorm.DB
 
 	opts *Options
+}
+
+func (tx *TxDB) New(v *gorm.DB) *TxDB {
+	return New(v, tx.opts)
+}
+
+func (tx *TxDB) Scopes(funcs ...TxScope) *TxDB {
+	scopes := make([]func(*gorm.DB) (tx *gorm.DB), 0)
+
+	for _, scope := range funcs {
+		scopes = append(scopes, scope)
+	}
+
+	tx2 := tx.DB.Scopes(scopes...)
+	return tx.New(tx2)
 }
 
 func (tx *TxDB) Transaction(fn TxFunction) error {
