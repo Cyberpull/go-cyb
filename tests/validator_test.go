@@ -4,13 +4,9 @@ import (
 	"testing"
 
 	"cyberpull.com/go-cyb/validator"
-)
 
-const (
-	stringEmptyData   string = ""
-	stringDefaultData string = "default"
-	stringNameData    string = "Christian Ezeani"
-	stringEmailData   string = "demo@example.com"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
 type DemoStructData struct {
@@ -20,7 +16,23 @@ type DemoStructData struct {
 	Ignored  bool
 }
 
-func TestValidator_ValidateBoolSuccess(t *testing.T) {
+type ValidatorTestSuite struct {
+	suite.Suite
+
+	stringEmptyData   string
+	stringDefaultData string
+	stringNameData    string
+	stringEmailData   string
+}
+
+func (s *ValidatorTestSuite) SetupSuite() {
+	s.stringEmptyData = ""
+	s.stringDefaultData = "default"
+	s.stringNameData = "Christian Ezeani"
+	s.stringEmailData = "demo@example.com"
+}
+
+func (s *ValidatorTestSuite) TestValidateBoolSuccess() {
 	info := &validator.Validation{
 		Name: "Bool",
 		Options: validator.Options{
@@ -30,12 +42,11 @@ func TestValidator_ValidateBoolSuccess(t *testing.T) {
 		},
 	}
 
-	if err := validator.Validate(true, info); err != nil {
-		t.Fatal(err)
-	}
+	err := validator.Validate(true, info)
+	require.NoError(s.T(), err)
 }
 
-func TestValidator_ValidateBoolError(t *testing.T) {
+func (s *ValidatorTestSuite) TestValidateBoolError() {
 	info := &validator.Validation{
 		Name: "Bool",
 		Options: validator.Options{
@@ -45,19 +56,23 @@ func TestValidator_ValidateBoolError(t *testing.T) {
 		},
 	}
 
-	if err := validator.Validate(false, info); err == nil {
-		t.Fatal("Expected an error")
-	}
+	err := validator.Validate(false, info)
+	require.Error(s.T(), err)
 }
 
-func TestValidator_ValidateStruct(t *testing.T) {
+func (s *ValidatorTestSuite) TestValidateStruct() {
 	data := DemoStructData{
-		Name:     stringNameData,
-		Email:    stringEmailData,
+		Name:     s.stringNameData,
+		Email:    s.stringEmailData,
 		Accepted: true,
 	}
 
-	if err := validator.Validate(data); err != nil {
-		t.Fatal(err)
-	}
+	err := validator.Validate(data)
+	require.NoError(s.T(), err)
+}
+
+/********************************************/
+
+func TestValidator(t *testing.T) {
+	suite.Run(t, new(ValidatorTestSuite))
 }

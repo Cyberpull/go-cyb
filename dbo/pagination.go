@@ -35,7 +35,12 @@ func Paginate[T any](tx *gorm.DB, page uint, limit ...uint) (value *Pagination[T
 	if vType.Kind() == reflect.Pointer {
 		vType = vType.Elem()
 		model = reflect.New(vType).Interface().(T)
+		tx = tx.Model(model)
+	} else {
+		tx = tx.Model(&model)
 	}
+
+	tx = tx.Offset(0).Limit(-1).Session(&gorm.Session{})
 
 	if vType.Kind() != reflect.Struct {
 		err = errors.New("Model should be a struct")
@@ -46,9 +51,15 @@ func Paginate[T any](tx *gorm.DB, page uint, limit ...uint) (value *Pagination[T
 	tmpValue.Data = make([]T, 0)
 	tmpValue.Current_page = uint(math.Max(float64(page), 1))
 	tmpValue.Per_page = int(math.Max(float64(limit[0]), 1))
-	tmpValue.From = tmpValue.Current_page * uint(tmpValue.Per_page)
+
+	if tmpValue.Current_page == 1 {
+		tmpValue.From = tmpValue.Current_page
+	} else {
+		tmpValue.From = tmpValue.Current_page * uint(tmpValue.Per_page)
+	}
 
 	offset := int(tmpValue.From) - 1
+
 	tx = tx.Offset(offset).Limit(tmpValue.Per_page)
 
 	if err = tx.Find(&tmpValue.Data).Error; err != nil {
@@ -59,7 +70,7 @@ func Paginate[T any](tx *gorm.DB, page uint, limit ...uint) (value *Pagination[T
 
 	var total int64
 
-	tx = tx.Offset(0).Limit(0)
+	tx = tx.Offset(0).Limit(-1)
 
 	if err = tx.Count(&total).Error; err != nil {
 		return

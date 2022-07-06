@@ -4,22 +4,26 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	_ "cyberpull.com/go-cyb/env"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	"cyberpull.com/go-cyb/errors"
 	"cyberpull.com/go-cyb/log"
 	"cyberpull.com/go-cyb/socket"
 )
 
-var (
-	socketClient *socket.Client
-	socketServer *socket.Server
-)
+type SocketTestSuite struct {
+	suite.Suite
 
-// Server Handlers
-func socketRegisterServerHandlers() socket.ServerHandlerSubscriber {
+	client *socket.Client
+	server *socket.Server
+}
+
+func (s *SocketTestSuite) registerServerHandlers() socket.ServerHandlerSubscriber {
 	return func(subscriber *socket.ServerHandlerCollection) (err error) {
 		log.Println("Registering test handlers...")
 
@@ -57,8 +61,7 @@ func socketRegisterServerHandlers() socket.ServerHandlerSubscriber {
 	}
 }
 
-// Server Handlers
-func socketRegisterServerAuth() socket.ServerAuthSubscriber {
+func (s *SocketTestSuite) registerServerAuth() socket.ServerAuthSubscriber {
 	return func(ref *socket.ServerClientRef) (err error) {
 		if _, err = ref.WriteStringln("TOKEN:"); err != nil {
 			return
@@ -84,7 +87,14 @@ func socketRegisterServerAuth() socket.ServerAuthSubscriber {
 	}
 }
 
-func socketRegisterClientAuth() socket.ClientAuthSubscriber {
+func (s *SocketTestSuite) serverClientInit() socket.ServerClientInitHandler {
+	return func(updater *socket.ServerClientUpdater) (err error) {
+		updater.Update("INIT_UPDATE_DEMO", "/testing", "TestData::ClientInit")
+		return
+	}
+}
+
+func (s *SocketTestSuite) registerClientAuth() socket.ClientAuthSubscriber {
 	return func(ref *socket.ClientRef) (err error) {
 		var data string
 
@@ -113,14 +123,7 @@ func socketRegisterClientAuth() socket.ClientAuthSubscriber {
 	}
 }
 
-func socketServerClientInit() socket.ServerClientInitHandler {
-	return func(updater *socket.ServerClientUpdater) (err error) {
-		updater.Update("INIT_UPDATE_DEMO", "/testing", "TestData::ClientInit")
-		return
-	}
-}
-
-func socketClientUpdate() socket.ClientUpdateSubscriber {
+func (s *SocketTestSuite) clientUpdate() socket.ClientUpdateSubscriber {
 	return func(collection *socket.ClientUpdateHandlerCollection) (err error) {
 		collection.On("INIT_UPDATE_DEMO", "/testing", func(out *socket.Output) {
 			var data string
@@ -136,109 +139,101 @@ func socketClientUpdate() socket.ClientUpdateSubscriber {
 	}
 }
 
-func TestSocket_StartServer(t *testing.T) {
-	var err error
-
+func (s *SocketTestSuite) startServer() (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.From(r)
 		}
-
-		if err != nil {
-			t.Fatal(err)
-		}
 	}()
 
-	socketServer = socket.NewServer(socket.ServerOptions{
+	s.server = socket.NewServer(socket.ServerOptions{
 		Host: os.Getenv("SOCKET_SERVER_HOST"),
 		Port: os.Getenv("SOCKET_SERVER_PORT"),
 		Name: "Socket Testing Server",
 	})
 
-	socketServer.Auth(
-		socketRegisterServerAuth(),
+	s.server.Auth(
+		s.registerServerAuth(),
 	)
 
-	socketServer.ClientInit(
-		socketServerClientInit(),
+	s.server.ClientInit(
+		s.serverClientInit(),
 	)
 
-	socketServer.Handlers(
-		socketRegisterServerHandlers(),
+	s.server.Handlers(
+		s.registerServerHandlers(),
 	)
 
 	errChan := make(chan error)
 
-	go socketServer.Listen(errChan)
+	go s.server.Listen(errChan)
 
 	err = <-errChan
+
+	return
 }
 
-func TestSocket_StartClient(t *testing.T) {
-	var err error
-
+func (s *SocketTestSuite) startClient() (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.From(r)
 		}
-
-		if err != nil {
-			t.Fatal(err)
-		}
 	}()
 
-	socketClient = socket.NewClient(socket.ClientOptions{
+	s.client = socket.NewClient(socket.ClientOptions{
 		ServerHost: os.Getenv("SOCKET_SERVER_HOST"),
 		ServerPort: os.Getenv("SOCKET_SERVER_PORT"),
 		Name:       "Socket Testing Client",
 	})
 
-	socketClient.Auth(
-		socketRegisterClientAuth(),
+	s.client.Auth(
+		s.registerClientAuth(),
 	)
 
-	socketClient.Update(
-		socketClientUpdate(),
+	s.client.Update(
+		s.clientUpdate(),
 	)
 
 	errChan := make(chan error)
 
-	go socketClient.Start(errChan)
+	go s.client.Start(errChan)
 
 	err = <-errChan
 
-	time.Sleep(time.Second * 5)
+	return
 }
 
-func TestSocket_SendSuccessfulRequest(t *testing.T) {
-	resp, err := socket.MakeRequest[string](socketClient, "DEMO", "/testing", "TestData")
+func (s *SocketTestSuite) SetupSuite() {
+	// Start Socket Server
+	require.NoError(s.T(), s.startServer())
 
-	if err != nil {
-		t.Fatal(err)
-		return
-	}
-
-	if resp != "SUCCESSFUL" {
-		t.Fatalf(`Expected "SUCCESSFUL", got "%s" instead.`, resp)
-	}
+	// Start Socket Client
+	require.NoError(s.T(), s.startClient())
 }
 
-func TestSocket_SendFailedRequest(t *testing.T) {
-	_, err := socket.MakeRequest[string](socketClient, "DEMO", "/testing", "BadTestData")
+func (s *SocketTestSuite) TearDownSuite() {
+	// Stop Socket Client
+	require.NoError(s.T(), s.client.Stop())
 
-	if err == nil {
-		t.Fatal(`Expected an error`)
-		return
-	}
-
-	message := err.Error()
-
-	if message != "FAILED" {
-		t.Fatalf(`Expected "FAILED", got "%s" instead.`, message)
-	}
+	// Stop Socket Server
+	require.NoError(s.T(), s.server.Stop())
 }
 
-func TestSocket_ReceiveUpdate(t *testing.T) {
+func (s *SocketTestSuite) TestSendSuccessfulRequest() {
+	resp, err := socket.MakeRequest[string](s.client, "DEMO", "/testing", "TestData")
+	require.NoError(s.T(), err)
+
+	assert.Equal(s.T(), "SUCCESSFUL", resp)
+}
+
+func (s *SocketTestSuite) TestSendFailedRequest() {
+	_, err := socket.MakeRequest[string](s.client, "DEMO", "/testing", "BadTestData")
+	require.Error(s.T(), err)
+
+	assert.EqualError(s.T(), err, "FAILED")
+}
+
+func (s *SocketTestSuite) TestReceiveUpdate() {
 	var err error
 
 	errChan := make(chan error, 1)
@@ -246,42 +241,23 @@ func TestSocket_ReceiveUpdate(t *testing.T) {
 
 	var requestData, updateData string
 
-	socketClient.On("UPDATE_DEMO", "/testing", func(out *socket.Output) {
+	s.client.On("UPDATE_DEMO", "/testing", func(out *socket.Output) {
 		errChan <- out.ParseData(&updateData)
 	})
 
-	requestData, err = socket.MakeRequest[string](socketClient, "UPDATE_DEMO", "/testing", "TestData")
+	requestData, err = socket.MakeRequest[string](s.client, "UPDATE_DEMO", "/testing", "TestData")
+	require.NoError(s.T(), err)
 
-	if err != nil {
-		t.Fatal(err)
-		return
-	}
+	assert.Equal(s.T(), "SUCCESSFUL", requestData)
 
-	if requestData != "SUCCESSFUL" {
-		t.Fatalf(`Expected "SUCCESSFUL", got "%s" instead.`, requestData)
-		return
-	}
+	err = <-errChan
+	require.NoError(s.T(), err)
 
-	if err = <-errChan; err != nil {
-		t.Fatal(err)
-		return
-	}
-
-	if updateData != "NEW_UPDATE" {
-		t.Fatalf(`Expected "NEW_UPDATE", got "%s" instead.`, updateData)
-	}
+	assert.Equal(s.T(), "NEW_UPDATE", updateData)
 }
 
-// Conclusion of socket tests
+/********************************************/
 
-func TestSocket_StopClient(t *testing.T) {
-	if err := socketClient.Stop(); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestSocket_StopServer(t *testing.T) {
-	if err := socketServer.Stop(); err != nil {
-		t.Fatal(err)
-	}
+func TestSocket(t *testing.T) {
+	suite.Run(t, new(SocketTestSuite))
 }
