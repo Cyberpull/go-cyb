@@ -12,14 +12,14 @@ jobs:
     runs-on: ubuntu-latest
     environment: testing
     env:
-      SOCKET_SERVER_HOST: secrets.SOCKET_SERVER_HOST
-      SOCKET_SERVER_PORT: secrets.SOCKET_SERVER_PORT
-      DB_DRIVER: secrets.DB_DRIVER
-      DB_HOST: secrets.DB_HOST
-      DB_PORT: secrets.DB_PORT
-      DB_USERNAME: secrets.DB_USERNAME
-      DB_PASSWORD: secrets.DB_PASSWORD
-      DB_DATABASE: secrets.DB_DATABASE
+      SOCKET_SERVER_HOST: ${{ secrets.SOCKET_SERVER_HOST }}
+      SOCKET_SERVER_PORT: ${{ secrets.SOCKET_SERVER_PORT }}
+      DB_DRIVER: ${{ secrets.DB_DRIVER }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_DATABASE: ${{ secrets.DB_DATABASE }}
     steps:
     - uses: actions/checkout@v3
 
