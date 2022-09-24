@@ -15,12 +15,16 @@ type ClientRef struct {
 	mutex  sync.Mutex
 }
 
-func (c *ClientRef) validate() (err error) {
-	if c.conn == nil || c.reader == nil {
-		err = errors.New("ClientRef not properly instantiated")
+func (c *ClientRef) validate() error {
+	if c.conn == nil {
+		return errors.New("Connection instance not found")
 	}
 
-	return
+	if c.reader == nil {
+		return errors.New("Client reader not found")
+	}
+
+	return nil
 }
 
 func (c *ClientRef) Write(b []byte) (i int, err error) {

@@ -19,6 +19,11 @@ func (tx *TxDB) New(v *gorm.DB) *TxDB {
 	return New(v, tx.opts)
 }
 
+func (tx *TxDB) Preload(query string, args ...any) *TxDB {
+	tx.DB = tx.DB.Preload(query, args...)
+	return tx
+}
+
 func (tx *TxDB) Scopes(funcs ...TxScope) *TxDB {
 	scopes := make([]func(*gorm.DB) (tx *gorm.DB), 0)
 
@@ -26,8 +31,9 @@ func (tx *TxDB) Scopes(funcs ...TxScope) *TxDB {
 		scopes = append(scopes, scope)
 	}
 
-	tx2 := tx.DB.Scopes(scopes...)
-	return tx.New(tx2)
+	tx.DB = tx.DB.Scopes(scopes...)
+
+	return tx
 }
 
 func (tx *TxDB) Transaction(fn TxFunction) error {
