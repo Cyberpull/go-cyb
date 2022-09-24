@@ -13,7 +13,7 @@ func DB(db *TxDB) DBFunction {
 		}
 
 		if db != nil {
-			value = db
+			value = db.NewSession()
 			return
 		}
 

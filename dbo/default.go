@@ -19,6 +19,11 @@ func (tx *TxDB) New(v *gorm.DB) *TxDB {
 	return New(v, tx.opts)
 }
 
+func (tx *TxDB) NewSession() *TxDB {
+	session := tx.Session(&gorm.Session{NewDB: true})
+	return New(session, tx.opts)
+}
+
 func (tx *TxDB) Preload(query string, args ...any) *TxDB {
 	tx.DB = tx.DB.Preload(query, args...)
 	return tx
