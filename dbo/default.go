@@ -20,7 +20,11 @@ func (tx *TxDB) New(v *gorm.DB) *TxDB {
 }
 
 func (tx *TxDB) NewSession() *TxDB {
-	session := tx.Session(&gorm.Session{NewDB: true})
+	session := tx.Session(&gorm.Session{
+		NewDB:       true,
+		Initialized: true,
+	})
+
 	return New(session, tx.opts)
 }
 
