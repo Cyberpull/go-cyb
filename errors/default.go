@@ -3,11 +3,13 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"runtime/debug"
 )
 
 type Error struct {
 	code    int
 	message string
+	stack   string
 }
 
 func (e Error) Code() int {
@@ -15,7 +17,18 @@ func (e Error) Code() int {
 }
 
 func (e Error) Error() string {
-	return e.message
+	message := e.message
+
+	if e.stack != "" {
+		message += "\n" + e.stack
+	}
+
+	return message
+}
+
+func (e *Error) WithStack() *Error {
+	e.stack = string(debug.Stack())
+	return e
 }
 
 /**********************************/
