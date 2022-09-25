@@ -13,6 +13,11 @@ func (n *NullUint) Scan(value any) (err error) {
 		return
 	}
 
+	if v, ok := value.(*uint); ok {
+		n.Uint, n.Valid = *v, ok
+		return
+	}
+
 	n.Uint, n.Valid = value.(uint)
 
 	return
