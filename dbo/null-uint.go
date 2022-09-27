@@ -14,19 +14,21 @@ func (n *NullUint) Scan(value any) (err error) {
 	}
 
 	if v, ok := value.(*uint); ok {
-		n.Uint, n.Valid = *v, ok
+		n.Uint, n.Valid = *v, *v > 0
 		return
 	}
 
-	n.Uint, n.Valid = value.(uint)
+	if v, ok := value.(uint); ok {
+		n.Uint, n.Valid = v, v > 0
+	}
 
 	return
 }
 
 func (n NullUint) Value() (driver.Value, error) {
-	if !n.Valid {
-		return nil, nil
+	if n.Valid && n.Uint > 0 {
+		return n.Uint, nil
 	}
 
-	return n.Uint, nil
+	return nil, nil
 }
