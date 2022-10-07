@@ -8,9 +8,9 @@ var seederHandlers = make([]SeederHandler, 0)
 
 func Seed(db *dbo.TxDB) (err error) {
 	for _, handler := range seederHandlers {
-		err = handler(db)
+		tx := db.NewSession()
 
-		if err != nil {
+		if err = handler(tx); err != nil {
 			return
 		}
 	}
