@@ -1,6 +1,9 @@
 package dbo
 
-import "database/sql/driver"
+import (
+	"database/sql/driver"
+	"encoding/json"
+)
 
 type NullUint struct {
 	Uint  uint
@@ -31,4 +34,22 @@ func (n NullUint) Value() (driver.Value, error) {
 	}
 
 	return nil, nil
+}
+
+func (n *NullUint) UnmarshalJSON(b []byte) error {
+	var value uint
+
+	if err := json.Unmarshal(b, &value); err != nil {
+		return err
+	}
+
+	return n.Scan(value)
+}
+
+func (n NullUint) MarshalJSON() ([]byte, error) {
+	if n.Valid {
+		return json.Marshal(n.Uint)
+	}
+
+	return json.Marshal(nil)
 }
