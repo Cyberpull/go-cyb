@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"cyberpull.com/go-cyb/database"
 	"cyberpull.com/go-cyb/dbo"
@@ -101,6 +102,50 @@ func (s *DBOTestSuite) TestPaginate() {
 
 	// Assert total records
 	assert.Equal(s.T(), s.total, data.Total)
+}
+
+func (s *DBOTestSuite) TestNullString() {
+	var data dbo.Null[string]
+
+	data.Scan("Hello")
+
+	assert.Equal(s.T(), data.Data, "Hello")
+	assert.True(s.T(), data.Valid)
+
+	data.Scan("")
+
+	assert.Equal(s.T(), data.Data, "")
+	assert.False(s.T(), data.Valid)
+}
+
+func (s *DBOTestSuite) TestNullUint() {
+	var data dbo.Null[uint]
+
+	data.Scan(uint(200))
+
+	assert.Equal(s.T(), data.Data, uint(200))
+	assert.True(s.T(), data.Valid)
+
+	data.Scan(uint(0))
+
+	assert.Equal(s.T(), data.Data, uint(0))
+	assert.False(s.T(), data.Valid)
+}
+
+func (s *DBOTestSuite) TestNullTime() {
+	var data dbo.Null[time.Time]
+
+	now := time.Now()
+	data.Scan(now)
+
+	assert.Equal(s.T(), data.Data, now)
+	assert.True(s.T(), data.Valid)
+
+	now = time.Time{}
+	data.Scan(now)
+
+	assert.Equal(s.T(), data.Data, now)
+	assert.False(s.T(), data.Valid)
 }
 
 /******************************************/
