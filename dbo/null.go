@@ -14,16 +14,22 @@ type Null[T comparable] struct {
 }
 
 func (n *Null[T]) Scan(value any) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.From(r)
+		}
+	}()
+
 	xType := reflect.TypeOf(n.Data)
 
 	xValue := reflect.ValueOf(value)
 	xValueType := xValue.Type()
 
-	if !xValueType.AssignableTo(xType) {
+	if !xValueType.AssignableTo(xType) && !xValueType.ConvertibleTo(xType) {
 		return errors.New("Invalid value")
 	}
 
-	n.Data = xValue.Interface().(T)
+	n.Data = xValue.Convert(xType).Interface().(T)
 	n.Valid = !xValue.IsZero()
 
 	return

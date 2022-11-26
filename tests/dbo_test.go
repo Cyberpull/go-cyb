@@ -121,12 +121,12 @@ func (s *DBOTestSuite) TestNullString() {
 func (s *DBOTestSuite) TestNullUint() {
 	var data dbo.Null[uint]
 
-	data.Scan(uint(200))
+	data.Scan(200)
 
 	assert.Equal(s.T(), data.Data, uint(200))
 	assert.True(s.T(), data.Valid)
 
-	data.Scan(uint(0))
+	data.Scan(0)
 
 	assert.Equal(s.T(), data.Data, uint(0))
 	assert.False(s.T(), data.Valid)
