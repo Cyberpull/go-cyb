@@ -148,6 +148,20 @@ func (s *DBOTestSuite) TestNullTime() {
 	assert.False(s.T(), data.Valid)
 }
 
+func (s *DBOTestSuite) TestNullBool() {
+	var data dbo.Null[bool]
+
+	data.Scan(true)
+
+	assert.Equal(s.T(), data.Data, true)
+	assert.True(s.T(), data.Valid)
+
+	data.Scan(false)
+
+	assert.Equal(s.T(), data.Data, false)
+	assert.False(s.T(), data.Valid)
+}
+
 /******************************************/
 
 func TestDBO(t *testing.T) {
