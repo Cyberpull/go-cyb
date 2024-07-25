@@ -7,6 +7,10 @@ The awesome GO-CYB library for Golang, aims to bring developer friendliness to j
 [![MIT license](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Go.Dev reference](https://img.shields.io/badge/go.dev-reference-blue?logo=go&logoColor=white)](https://pkg.go.dev/cyberpull.com/go-cyb?tab=doc)
 
+> [!WARNING]
+> This repository has been archived. Please consider using [Cyberpull/gokit](https://github.com/Cyberpull/gokit) as a replacement. Our sincere apologies for the inconveniences.
+
+
 ## Overview
 
 ## Getting Started
